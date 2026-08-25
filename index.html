@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>第五人格 · 密码机刷点推导工具</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <div class="app">
+
+    <!-- ============ 侧边栏：地图菜单 ============ -->
+    <aside class="sidebar is-collapsed" id="sidebar">
+      <div class="sidebar-scroll">
+      <div class="brand">
+        <h1 class="brand-title">
+          <span class="brand-text">密码机刷点</span>
+          <svg class="brand-icon" viewBox="0 0 1024 1024" aria-hidden="true" focusable="false">
+            <path d="M85.333333 469.717333C85.333333 451.829333 99.658667 437.333333 117.333333 437.333333s32 14.506667 32 32.384V786.133333c0 5.962667 4.778667 10.794667 10.666667 10.794667a10.56 10.56 0 0 0 5.045333-1.28l154.848-84.021333a73.898667 73.898667 0 0 1 72.853334 1.290666l252.544 148.842667a10.56 10.56 0 0 0 10.122666 0.341333l213.333334-107.264c3.626667-1.824 5.92-5.568 5.92-9.664V469.717333C874.666667 451.829333 888.992 437.333333 906.666667 437.333333s32 14.506667 32 32.384V745.173333c0 28.682667-16.053333 54.890667-41.44 67.658667l-213.333334 107.264a73.898667 73.898667 0 0 1-70.805333-2.378667L360.533333 768.896a10.56 10.56 0 0 0-10.410666-0.192l-154.848 84.032a73.973333 73.973333 0 0 1-35.285334 8.96c-41.237333 0-74.666667-33.813333-74.666666-75.552V469.717333z m672-132.266666c0 87.808-73.173333 192.917333-217.056 320.288a42.666667 42.666667 0 0 1-56.554666 0C339.829333 530.378667 266.666667 425.258667 266.666667 337.450667 266.666667 203.968 376.64 96 512 96s245.333333 107.968 245.333333 241.450667z m-426.666666 0c0 61.514667 59.712 149.557333 181.333333 259.701333 121.621333-110.144 181.333333-198.186667 181.333333-259.701333C693.333333 239.584 612.277333 160 512 160s-181.333333 79.573333-181.333333 177.450667zM512 405.333333a64 64 0 1 1 0-128 64 64 0 0 1 0 128z" fill="currentColor" />
+          </svg>
+        </h1>
+      </div>
+      <nav class="map-menu">
+        <div class="menu-title">选择地图</div>
+        <div id="mapMenu" class="map-menu-list"></div>
+      </nav>
+      <div class="sidebar-foot">坐标数据 · BWIKI 第五人格</div>
+      </div>
+      <button id="sidebarToggle" class="sidebar-toggle" type="button" title="打开地图菜单" aria-expanded="false" aria-controls="sidebar" aria-label="打开 / 收起地图菜单"><svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true" focusable="false"><path d="M10 5l6 7-6 7" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+    </aside>
+
+    <!-- 抽屉遮罩层：展开时覆盖主区，点击自动收起 -->
+    <div id="drawerBackdrop" class="drawer-backdrop"></div>
+
+    <!-- ============ 主区 ============ -->
+    <main class="main">
+
+      <!-- 顶部状态面板 -->
+      <header class="status-panel">
+        <div class="status-left">
+          <span class="status-label">剩余匹配刷点方案</span>
+          <span class="status-number" id="remainingCount">—</span>
+          <span class="status-unit">组</span>
+          <span id="statusBadge" class="status-badge"></span>
+        </div>
+        <div class="status-right">
+          <button id="confirmLayoutBtn" class="confirm-layout-btn" type="button" disabled>确认布局</button>
+          <button id="zoomOutBtn" class="icon-btn" type="button" title="缩小">−</button>
+          <button id="zoomFitBtn" class="icon-btn" type="button" title="适应窗口">⛶</button>
+          <button id="zoomInBtn" class="icon-btn" type="button" title="放大">＋</button>
+          <button id="resetBtn" class="reset-btn" type="button">↺ 重置</button>
+        </div>
+        <div class="linkage-bar" id="linkageBar">加载中…</div>
+        <span class="status-sub" id="statusText">正在加载地图数据…</span>
+      </header>
+
+      <!-- 工作区：画布（自适应主区） -->
+      <div class="workspace">
+        <!-- 地图画布 -->
+        <section class="map-frame">
+          <div class="map-wrap" id="mapWrap">
+            <canvas id="mapCanvas"></canvas>
+            <div class="map-title" id="mapTitle">
+              <svg class="map-title-icon" viewBox="0 0 1024 1024" aria-hidden="true" focusable="false">
+                <path d="M512 96C375.5 96 265 206.5 265 343c0 149.9 247 585 247 585s247-435.1 247-585C759 206.5 648.5 96 512 96z m0 382c-74.6 0-135-60.4-135-135s60.4-135 135-135 135 60.4 135 135-60.4 135-135 135z" fill="currentColor"/>
+              </svg>
+              <span id="mapTitleText">—</span>
+            </div>
+            <div id="mapTooltip" class="map-tooltip hidden"></div>
+            <div id="mapLoading" class="map-loading">加载地图数据…</div>
+          </div>
+        </section>
+      </div>
+      <div class="brush-hint" id="brushHint">点击点位 = 状态轮换（右键 / 长按 = 回退）</div>
+
+      <footer class="app-footer">
+        每局密码机共 <b>7 台</b>，按固定刷点组 <b>7 选 7</b> 锁定唯一方案。<br />
+        <b>★</b>=必刷点 · 选中「有密码机」自动联动（高亮伴生、置灰互斥、更新匹配组）。<br />
+        滚轮缩放 · 拖拽平移 · 点击切换状态（右键回退）· 悬停查看联动关系。
+        <button id="restartTourBtn" class="restart-tour-btn" type="button">🎓 新手引导</button>
+      </footer>
+    </main>
+
+    <!-- 右侧控制栏：全高通顶（图例 + 刷点方案） -->
+    <aside class="right-panel" id="rightPanel">
+      <div class="panel" id="legendPanel">
+        <h2>状态图例 <span class="panel-sub">点击图例设为「画笔」</span></h2>
+        <div id="legend" class="legend"></div>
+      </div>
+      <div class="panel">
+        <h2>刷点方案 <span class="panel-sub">悬停预览点位分布</span></h2>
+        <div id="presetList" class="preset-list"></div>
+      </div>
+    </aside>
+  </div>
+
+  <script type="module" src="app.js"></script>
+</body>
+</html>
