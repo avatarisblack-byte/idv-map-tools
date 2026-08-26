@@ -1,6 +1,6 @@
 # CODEMAP — 项目上下文索引
 
-> 第五人格 · 密码机刷点推导工具（军工厂等 9 张地图）。纯前端 + Canvas，无框架、无构建，坐标数据与规则引擎完全数据驱动。
+> 第五人格 · 密码机刷点推导工具（军工厂等 9 张地图）。纯前端 + Canvas，无框架、无构建；主题为 **Material Design 3（MD3）**，坐标数据与规则引擎完全数据驱动。
 
 ---
 
@@ -8,52 +8,69 @@
 
 ```
 项目根目录
-├── index.html          # DOM 骨架：左侧悬浮抽屉(#sidebar/#sidebarToggle) / 顶部状态栏(含 #confirmLayoutBtn/#statusBadge) / Canvas 容器 / 右侧全高控制栏 / 页脚(重启指引)
-├── style.css           # 全部样式（哥特暗黑主题 + 抽屉/状态胶囊动效 + 响应式 + 减动效适配 + 新手指引）
-├── app.js              # ★ 核心逻辑（ES Module）：fetch 加载、Canvas 渲染、缩放平移、点位勾选、联动渲染、DOM 更新
-├── rule-engine.js      # ★ 刷点联动规则引擎（ES Module）：必刷/互斥/伴生/组合过滤，纯数据驱动
-├── tour.js             # 新手指引（Onboarding Tour）：聚光灯遮罩 + 自动定位引导卡片 + step.link 链接 + localStorage 记忆
-├── data/               # 9 张地图坐标 JSON（运行期由 app.js fetch 加载）
-│   ├── 军工厂.json 圣心医院.json 红教堂.json 永眠镇.json 唐人街.json
-│   └── 不归林.json 湖景村.json 月亮河公园.json 里奥的回忆.json
-├── map_pic/            # 9 张地图底图 PNG（<地图名>_基本信息_无名称点.png）
-├── codemachine_icon/   # 密码机 6 态 SVG 图标（配色语义来源，已内联为 Path2D，仅作参考）
-├── serve.js            # 本地服务器 A：Node 静态服务器（node serve.js）
-├── 一键启动.bat         # 本地服务器 B：零依赖 PowerShell HttpListener（双击即用，无需 Node/Python）
+├── index.html            # DOM 骨架：Navigation Drawer(#sidebar) / Top App Bar(.status-panel) / Canvas / 右侧控制栏 / 页脚(三按钮)
+├── style.css             # 全部样式（MD3 主题：语义 Token + 组件样式 + 响应式 + 减动效 + 新手指引）
+├── app.js                # ★ 核心逻辑（ES Module）：fetch 加载、Canvas 渲染、缩放平移、点位勾选、联动渲染、DOM 更新
+├── rule-engine.js        # ★ 刷点联动规则引擎（ES Module）：必刷/互斥/伴生/组合过滤，纯数据驱动
+├── tour.js               # 新手指引（Onboarding Tour，5 步）：聚光灯遮罩 + 自动定位引导卡片 + step.link 链接 + localStorage 记忆
+├── package.json          # npm 清单（devDependency: @material/material-color-utilities；脚本 npm run tokens）
+├── scripts/
+│   └── generate-m3-tokens.mjs  # MD3 Token 生成器（构建期运行，产出 src/styles/md3-tokens.css）
+├── src/styles/
+│   └── md3-tokens.css    # ★ 全局 MD3 设计 Token（自动生成：Dynamic Color 亮/暗 + Surface Container + Shape + Elevation + Typeface）
+├── .claude/skills/
+│   └── material-design-3-ui/   # 项目级 Agent Skill（MD3 设计/审查规范，SKILL.md + references/*）
+├── data/                 # 9 张地图坐标 JSON（运行期由 app.js fetch 加载，bgImage 指向 assets/maps/）
+├── assets/               # 全部美术资源（统一收纳）
+│   ├── icons/            # bilibili.svg / github.svg / 地图.svg / 定位.svg（品牌与 UI 图标）
+│   ├── cipher/           # 密码机 6 态 SVG + 密码机.png/svg（已内联为 Path2D，仅作参考）
+│   └── maps/             # 9 张地图底图 PNG（<地图名>_基本信息_无名称点.png）
+├── serve.js              # 本地服务器：Node 静态服务器（node serve.js）
+├── 一键启动.bat           # 本地服务器：零依赖 PowerShell HttpListener（双击即用）
 └── codemachine_Distribution/   # 数据源与抽取工具（BWIKI 原始 txt → 汇总 JSON → data/*.json）
-    ├── maps_input/*.txt            # 各图 BWIKI 页面原始数据
-    ├── batch_extract_cipher.py     # 原始抽取脚本
-    ├── generate_data_json.ps1      # 汇总 JSON → data/*.json 的生成脚本
-    └── output/*.json               # 原始抽取结果（含 _所有地图密码机汇总.json）
 ```
 
-**运行方式**（二者选一，均需 HTTP，因为 `app.js` 用 `fetch` + ES Module，`file://` 会被浏览器拦截）：
+**运行方式**（二者选一，均需 HTTP，`app.js` 用 `fetch` + ES Module，`file://` 会被浏览器拦截）：
 - 有 Node：`node serve.js` → http://localhost:8137
-- 无 Node：双击 `一键启动.bat`（内置 HttpListener 服务，自动开浏览器）
+- 无 Node：双击 `一键启动.bat`
+- 重新生成 MD3 Token：`npm run tokens [种子色]`（默认 `#c9a227` 金色）
 
 ---
 
-## 1.5 UI 布局结构（PC 端三区 + 悬浮抽屉）
+## 1.5 MD3 主题体系（Theme / Token）
+
+- **依赖**：`@material/material-color-utilities@^0.3.0`（锁定 0.3.x；`0.4.0` 的 ESM 产物在纯 Node 下无法解析）。
+- **构建期生成、运行时零依赖**：`scripts/generate-m3-tokens.mjs` 用 Dynamic Color 算法（种子色 `#c9a227`）生成静态 `src/styles/md3-tokens.css`；浏览器无 importmap、无打包器。
+- **亮/暗方案**：`:root` 为暗色，`.md3-light` 为亮色。当前 `<html class="md3-light">` 默认亮色（白底）；右上角 `#themeToggle` 按钮切换深色（增删 `md3-light` class，`localStorage.idvTheme` 记忆）。
+- **核心 Token**：
+  - 色彩 `--md-sys-color-*`：primary / on-primary / primary-container / secondary / tertiary / error / surface / on-surface / surface-variant / on-surface-variant / outline / outline-variant / **surface-container-(lowest|low|container|high|highest)** / surface-dim|bright / inverse-* 等
+  - 字体 `--md-ref-typeface-plain`（Roboto/Noto Sans SC）、`--md-ref-typeface-brand`（style.css 覆盖为 Noto Serif SC 衬线，用于品牌标题）
+  - 圆角 `--md-sys-shape-corner-{xs,sm,md,lg,xl,full}` = 4/8/12/16/28/9999px
+  - 阴影 `--md-sys-elevation-level-0..5`
+- **style.css 语义别名**：`--gold/--text/--muted/--panel/--bg/--blood` 等桥接到 MD3 Token，`--state-hover/--state-pressed` 用 `color-mix` 实现 MD3 State Layer。
+
+## 1.6 UI 布局结构（PC 三区 + 悬浮抽屉）
 
 ```
-.app (flex 行，height:100vh)
-├── .sidebar#sidebar        # 左侧地图菜单 = 悬浮抽屉 Overlay（position:fixed，translateX(-100%) ↔ 0）
-│   ├── .sidebar-scroll     # 内容滚动容器（brand / map-menu / sidebar-foot）
-│   └── #sidebarToggle      # 贴边金色胶囊拉手（right:-30px、30×72px、top:50% 垂直居中，随抽屉 translateX 同步，SVG 左右折角箭头+金色发光）
-├── #drawerBackdrop         # 遮罩层（z-index:90，点击收起抽屉）
-├── .main (flex:1 列)
-│   ├── .status-panel       # 顶部状态栏：剩余匹配刷点方案 X 组 → #statusBadge → 缩放/重置 → #linkageBar → #statusText
-│   ├── .workspace          # 自适应画布区（.map-frame > .map-wrap > #mapCanvas）
-│   ├── .brush-hint
-│   └── .app-footer
-└── .right-panel#rightPanel # 右侧全高通顶控制栏（状态图例 + 刷点方案）
+.app (flex 行, 100vh)
+├── .sidebar#sidebar          # Navigation Drawer（悬浮 Overlay，surface-container，端角 16px 圆角 + elevation-3）
+│   ├── .brand                # 品牌标题（Noto Serif SC）
+│   ├── .map-menu             # 地图导航列表（.map-item 56px 全药丸，active=secondary-container，aria-current=page）
+│   └── #sidebarToggle        # 抽屉拉手（primary 色，吸附左缘）
+├── #drawerBackdrop           # scrim 遮罩（点击收起）
+├── .main
+│   ├── .status-panel         # Top App Bar：扁平全宽 surface-container（无边框/圆角/阴影），负边距贴边
+│   │   ├── .status-left      # 「剩余匹配刷点方案 N 组」（N 锁定=tertiary / 冲突=error）
+│   │   └── .status-right     # 确认布局(Filled) + 缩放(Icon ×3, aria-label) + 重置(Outlined)
+│   ├── .workspace            # .map-frame（无框）> .map-wrap（深色底 #0a0907，12px 圆角）> #mapCanvas + .map-title（左上角，定位图标=assets/icons/定位.svg 内联）
+│   ├── .brush-hint           # 画笔提示
+│   └── .app-footer           # 说明文字 + .footer-actions（三按钮：新手引导 / Bilibili Wiki / GitHub，后两者带品牌图标居左）
+└── .right-panel#rightPanel   # 右侧控制栏（surface-container-low，无左边框）
+    ├── #themeToggle          # 深色模式切换（Icon Button，靠右上角，月亮/太阳 SVG）
+    ├── .panel#legendPanel    # 卡片（filled: surface-container-highest，无描边/阴影）
+    │   └── .legend           # 状态图例 = Filter Chip（.legend-item 56px、圆形暗色底座、对称 2 列网格，aria-pressed）
+    └── .panel                # 卡片：刷点方案（.preset-chip 2 列网格；悬停 state-layer；筛选/锁定后显示 SVG 对勾/叉；is-filtered 降透明 / is-locked tertiary 文字）
 ```
-
-- **状态胶囊 `#statusBadge`**：单元素统一承载「锁定(绿 🔒刷点X组) / 冲突(红 ⚠️无匹配方案)」，未触发时 `display:none` 不占位，顶部栏高度恒定、不遮挡地图。
-- **顶部状态栏响应式**：`flex-wrap:wrap; gap:12px; justify-content:space-between`——宽屏左标题右按钮组两端对齐；窄屏按钮组自动降至第二行并靠左对齐（`.status-right` 取消 `margin-left:auto`，配 `flex-wrap`/`max-width:100%` 防超窄屏溢出）。
-- **响应式**：`@media (max-width:768px)` 降级为单列流式（Header → Canvas 56vh → 底部卡片区）；抽屉逻辑 PC/移动端统一（Overlay 不挤压主布局）。
-- **减动效**：`prefers-reduced-motion` 关闭抽屉位移/脉冲/按压缩放，Canvas 脉冲相位冻结。
-- **新手指引 `tour.js`（共 5 步）**：首次访问自动触发（跳过/完成 → `localStorage.hasCompletedTour=true`，之后不再自动出现），页脚「🎓 新手引导」手动重启；聚光灯高亮 + 自动定位引导卡片（Top/Bottom/Left/Right）+ 上一步/下一步/跳过/完成 + 右上角进度（1/5 → 5/5），`Esc`/`←→` 快捷操作。**第 5 步「数据来源与开源项目」为最终页**（高亮顶部状态栏 `.status-panel`）：致谢 Bilibili 第五人格 Wiki、介绍 GitHub 开源仓库，并在卡片内渲染可点击链接按钮（`step.link: { text, href }`，`target="_blank"` 新窗口）跳转至 https://github.com/avatarisblack-byte/idv-map-tools；最终页仅保留【上一步】+【完成】。
 
 ---
 
@@ -62,13 +79,12 @@
 ```json
 {
   "mapName": "军工厂",
-  "bgImage": "map_pic/军工厂_基本信息_无名称点.png",
+  "bgImage": "assets/maps/军工厂_基本信息_无名称点.png",
   "bgImageRemote": "https://patchwiki.biligame.com/images/dwrg/4/44/7kg6dzhfjvhvjvdxf7xg2zbpq6yzovs.png",
   "aspectW": 699,
   "aspectH": 600,
   "allPoints": [
-    { "id": "p1", "name": "点位1", "x": 31.9, "y": 12 },
-    { "id": "p6", "name": "点位6", "x": 38.05, "y": 81.33 }
+    { "id": "p1", "name": "点位1", "x": 31.9, "y": 12 }
   ],
   "presets": [
     { "id": "group1", "name": "第1组", "points": ["p1", "p2", "p3", "p4", "p5", "p6", "p7"] }
@@ -81,7 +97,7 @@
 | `mapName` | 地图名（菜单名 = 文件名） |
 | `bgImage` / `bgImageRemote` | 底图本地路径 / 远程回退 URL |
 | `aspectW` / `aspectH` | 底图原始像素尺寸（Canvas 适配用） |
-| `allPoints[].x/.y` | **归一化百分比坐标（0~100）**，基于整张底图；Canvas 中换算为 `(x/100*aspectW, y/100*aspectH)` |
+| `allPoints[].x/.y` | **归一化百分比坐标（0~100）**；Canvas 换算 `(x/100*aspectW, y/100*aspectH)` |
 | `allPoints[].id` | `p1..pN`，按「跨组首次出现顺序」自动编号 |
 | `presets[].points` | 该固定刷点组包含的点位 id（每局 7 台） |
 
@@ -95,104 +111,71 @@
 
 ```js
 const engine = new RuleEngine(mapData);   // 构造时一次性推导全部关系
-
-engine.filterGroups(selectedIds, excludedIds)  // → 匹配组 [{id,name,points:Set}]（必须有 sel，不能有 excl）
-engine.isAlwaysSpawn(id)   // → bool   必刷点（出现在 100% 组）
-engine.exclusionsOf(id)    // → Set    与 id 互斥的点（从未同组出现）
-engine.companionsOf(id)    // → Set    与 id 伴生的点（id 出现则其必现）
-engine.groupsOf(id)        // → group[]  id 所在的组
-engine.groupNamesOf(id)    // → name[]   id 所在组名（用于 tooltip）
-engine.alwaysSpawn         // → Set<pointId>（全局必刷点集合）
+engine.filterGroups(selectedIds, excludedIds)  // → 匹配组 [{id,name,points:Set}]
+engine.isAlwaysSpawn(id)   // → bool   必刷点
+engine.exclusionsOf(id)    // → Set    互斥点
+engine.companionsOf(id)    // → Set    伴生点
+engine.groupsOf(id)        // → group[]
+engine.groupNamesOf(id)    // → name[]
+engine.alwaysSpawn         // → Set<pointId>
 engine.stats               // → { pointCount, groupCount, alwaysSpawnCount, exclusionPairCount, cooccurrencePairCount }
 ```
 
-### `app.js` 的调用点
+### `app.js` 调用点
 
-| app.js 位置 | 调用 |
+| 位置 | 调用 |
 |---|---|
 | `loadMap()` | `engine = new RuleEngine(data)` |
-| `recompute()` | `engine.filterGroups(sel, excl)`、`engine.companionsOf(id)`、`engine.alwaysSpawn` |
-| `drawMarker()` | `engine.isAlwaysSpawn(id)`、`engine.companionsOf(hoveredId)`、`engine.exclusionsOf(hoveredId)` |
+| `recompute()` | `engine.filterGroups / companionsOf / alwaysSpawn` |
+| `drawMarker()` | `engine.isAlwaysSpawn / companionsOf / exclusionsOf` |
 | `buildTooltip()` | `engine.isAlwaysSpawn / companionsOf / exclusionsOf / groupNamesOf` |
-| `updateStatus()` | `engine.alwaysSpawn`、`linkage.matched / companions` |
+| `updateStatus()` | `engine.alwaysSpawn`、`linkage.matched/companions` |
 
 ---
 
 ## 4. Canvas 状态管理逻辑
 
-### 4.1 状态模型（三组变量）
+### 4.1 状态模型
 
 ```js
-// ① 点位状态（唯一持久状态源）
-pointStates = { [id]: 'unknown' | 'noCipher' | 'hasCipher' | 'small' | 'big' | 'finish' }
-
-// ② 视图变换（缩放平移）
-view = { scale, tx, ty }        // 屏幕 = 地图坐标 * scale + (tx, ty)
-//   fitView(): 等比适配居中   clampView(): 边缘钳制   zoomAt(): 以光标为中心缩放
-
-// ③ 派生联动结果（每次状态变更后 recompute() 生成）
-linkage = {
-  sel:        Set,  // 已选（hasCipher/small/big/finish）
-  excl:       Set,  // 排除（noCipher）
-  matched:    [],   // engine.filterGroups 结果
-  impossible: Set,  // 未知 && 不在任何匹配组 → 置灰
-  companions: Set,  // 已选点的伴生点（未知）→ 伴生环
-  deduced:    Set   // 唯一匹配组中未标记点 → 蓝圈
-}
-
-// ④ 瞬时态（悬停/预览）
-hoveredId, previewIds, activeBrush, mapImage, engine, currentData
+pointStates = { [id]: 'unknown' | 'noCipher' | 'hasCipher' | 'small' | 'big' | 'finish' }  // 唯一持久状态源
+view = { scale, tx, ty }        // 屏幕 = 地图坐标 * scale + (tx, ty)；fitView/clampView/zoomAt
+linkage = { sel, excl, matched, impossible, companions, deduced }   // 派生联动结果
+hoveredId / previewIds / activeBrush / mapImage / engine / currentData  // 瞬时态
 ```
 
 ### 4.2 渲染循环
 
 ```
-requestAnimationFrame(loop) → draw(now) 每帧执行：
+requestAnimationFrame(loop) → draw(now)：
   1) setTransform(dpr) + clearRect
-  2) 绘制底图（save → translate(tx,ty) → scale(scale) → drawImage → restore）
+  2) 底图（save → translate(tx,ty) → scale(scale) → drawImage → restore）
   3) 遍历 allPoints → drawMarker(p, now)
 ```
-
-`drawMarker` 渲染优先级（覆盖层互不冲突）：
-1. 底环（按状态色；未知=虚线、无密码机=红、大遗产=脉冲红光）
-2. 方案列表悬停预览环（未破译蓝，`previewIds`）
-3. 图标（未知=灰+「?」，无密码机=红叉，其余=对应色密码机）
-4. 编号角标（右下金圈）
-5. **必刷星标**（左上未破译蓝★，`engine.isAlwaysSpawn`）
-6. **置灰+斜杠**（`linkage.impossible`）
-7. 外圈：选中蓝环 > 伴生蓝虚线环 > 悬浮伴生预览 > 推导蓝闪烁环（统一「未破译」蓝系）
 
 ### 4.3 交互 → 状态 → 联动链路
 
 ```
-pointerdown(仅 button===0) → 进入拖拽平移/点击判定（右键不进入 dragging）
-pointerup(未移动 && !suppressClick) → hitTest → applyPoint(id) → cycle/setState
-contextmenu(右键/长按)  → cycle(id, -1) 并置 suppressClick=true（防止抬手被 pointerup 前进轮转抵消）
-wheel                 → zoomAt
-pointermove(未拖动)   → updateHover → buildTooltip（必刷/伴生/互斥/所在组）+ 悬浮预览
-图例点击               → setBrush（画笔模式）
-重置按钮               → resetAll
-```
-
-```
-setState(id, state)
-  → updateLegend()          // 图例计数
-  → updateStatus()
-      → linkage = recompute()          // sel/excl → filterGroups → impossible/companions/deduced
-      → 更新：剩余组数 / #statusBadge（锁定=绿·冲突=红）/ #linkageBar / 方案列表(✓/✕)
-  → 下一帧 draw() 自动按 linkage 重绘覆盖层
+pointerdown → 拖拽平移/点击判定；pointerup → hitTest → applyPoint(id) → cycle/setState
+contextmenu（右键/长按）→ cycle(id, -1)；wheel → zoomAt；pointermove → updateHover → buildTooltip
+图例点击 → setBrush（画笔模式）；重置 → resetAll
+setState → updateLegend() → updateStatus() → recompute() → filterGroups → 更新剩余组数 / linkageBar / 方案列表 / 确认按钮态 → 下一帧 draw()
 ```
 
 ---
 
 ## 5. 关键约定与注意事项
 
-- **必须 HTTP 访问**：`fetch` 加载 JSON + ES Module 导入，`file://` 下均被浏览器拦截。
-- **坐标**：点位 `x/y` 为 0~100 百分比，Canvas 中映射到 `aspectW×aspectH` 底图空间；缩放时点位图标保持固定屏幕尺寸（仅位置随视图缩放）。
-- **状态语义**：`hasCipher/small/big/finish` 归入「有密码机」一族（过滤「必须包含」），`noCipher` 为「排除包含」。
-- **规则引擎零硬编码**：对任意合规地图 JSON 均生效；新增地图只需在 `data/` 放 JSON 并在 `app.js` 的 `MAP_LIST` 加名字。
-- **图标来源**：密码机造型取自 `codemachine_icon/*.svg` 的 path，已在 `app.js` 内联为 `Path2D`（`CIPHER_BODY/CIPHER_ANTENNA/CIPHER_HALO`），配色沿用游戏语义（蓝=未破译 / 绿=小遗产 / 红=大遗产 / 黄=已点亮 / 灰=未知 / 红叉=无密码机）。
-- **抽屉 Overlay**：左栏 `position:fixed` 脱离文档流，展开/收起只改 `transform`（0.3s `--ease-drawer`），不触发主区重排，因此无需 Canvas 重算；`resizeCanvas` 仅由 `window.resize` 兜底。
-- **状态胶囊**：锁定/冲突共用 `#statusBadge`，由 `updateStatus()` 以 `textContent` + `className`（`lock`/`conflict`）切换，替代旧 `#lockBadge` / `#conflictBanner`。
-- **必刷点**：`pointStates` 初始化/重置时，必刷点（`engine.isAlwaysSpawn`）默认 `hasCipher`；`cycle()` 用 `HAS_FAMILY` 顺序跳过「未知/无密码机」，`setState()` 拦截无效状态。
-- **动效令牌**：`:root` 提供 `--ease-out / --ease-in-out / --ease-drawer`；仅动画 `transform/opacity/color/border/background/box-shadow`，禁用 `transition:all`。
+- **必须 HTTP 访问**：`fetch` 加载 JSON + ES Module 导入，`file://` 下被浏览器拦截。
+- **坐标**：`x/y` 为 0~100 百分比；缩放时点位图标保持固定屏幕尺寸。
+- **状态语义**：`hasCipher/small/big/finish` 归「有密码机」（必须包含），`noCipher` 为「排除」；`finish`（已点亮）最多 5 台——点亮 5 台即可开门逃生，超限在 `setState` 拦截。
+- **规则引擎零硬编码**：新增地图只需 `data/` 放 JSON + `app.js` 的 `MAP_LIST` 加名。
+- **图标**：密码机造型内联为 `Path2D`（`CIPHER_BODY/CIPHER_ANTENNA/CIPHER_HALO`）。
+- **MD3 合规要点**（依 `.claude/skills/material-design-3-ui`）：
+  - Top App Bar / 卡片 / 抽屉用 **surface-container 语义角色**，不用描边圆角盒或装饰阴影；
+  - 按钮按语义用 Filled（主行动）/ Outlined / Text / Icon，**全药丸 40px**；图例是 Filter Chip（**8px 圆角流式**，非药丸）；
+  - 阴影仅保留 drawer / tooltip / popover 等悬浮层；
+  - 状态层用 `color-mix`（on-surface 8%/12%）。
+- **无障碍**：全局 `:focus-visible` 主色焦点环；图标按钮带 `aria-label`；图例 `aria-pressed`；地图菜单 `aria-current=page`；`prefers-reduced-motion` 关闭动效。
+- **新手指引**：5 步（Step 5 = 数据来源与开源仓库，含 GitHub 链接按钮），完成/跳过写 `localStorage.hasCompletedTour=true`。
+- **动效令牌**：`--ease-out / --ease-in-out / --ease-drawer`；仅动画 `transform/opacity/color/border/background/box-shadow`。

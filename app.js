@@ -13,7 +13,7 @@ import { mountTour } from './tour.js';
 const STATE_ORDER = ['unknown', 'noCipher', 'hasCipher', 'small', 'big', 'finish'];
 const STATE_META = {
   unknown:   { label: '未知',              short: '未知' },
-  noCipher:  { label: '确认无密码机',       short: '无' },
+  noCipher:  { label: '无密码机',           short: '无' },
   hasCipher: { label: '未破译',             short: '未' },
   small:     { label: '小遗产',   short: '小' },
   big:       { label: '大遗产',   short: '大' },
@@ -22,17 +22,23 @@ const STATE_META = {
 /* 属于「有密码机」一族：用于组合过滤中「必须包含」 */
 const HAS_FAMILY = ['hasCipher', 'small', 'big', 'finish'];
 
+/* 状态色 = 地图标记调色板：针对暗色地图画布（#0a0907）调校，与 UI 亮/暗方案解耦。
+ * 以品牌金色 #c9a227 为锚、暖调收敛；值对齐暗色 M3 方案的语义角色。 */
 const STATE_COLORS = {
-  unknown:   { c: '#8f8f8f', glow: null },
-  noCipher:  { c: '#5b5b5b', glow: null },
-  hasCipher: { c: '#8bc2ee', glow: 'rgba(139,194,238,0.55)' },
-  small:     { c: '#5ee87a', glow: 'rgba(94,232,122,0.6)' },
-  big:       { c: '#f03333', glow: 'rgba(240,51,51,0.75)' },
-  finish:    { c: '#d6d024', glow: 'rgba(214,208,36,0.6)' }
+  unknown:   { c: '#b7b0a3', glow: null },                                   // 中性暖灰（onSurfaceVariant）
+  noCipher:  { c: '#7d7668', glow: null },                                   // 弱化暖灰（outline）+ 红✕
+  hasCipher: { c: '#8bc2ee', glow: 'rgba(139,194,238,0.55)' },               // 信息蓝（功能性对比色，保留）
+  small:     { c: '#adcfad', glow: 'rgba(173,207,173,0.6)' },                // 灰绿（tertiary）
+  big:       { c: '#ff5c4d', glow: 'rgba(255,92,77,0.8)' },                  // 饱和暖红（高强调）
+  finish:    { c: '#ffd24a', glow: 'rgba(255,210,74,0.75)' }                 // 亮金（"点亮"，醒目）
 };
 
 /* 「未破译」统一蓝：可用/确定密码机标记的标准蓝 */
 const CIPHER_BLUE = '#8bc2ee';
+
+/* 预设方案状态图标（内联 SVG，替代字体 ✓/✕） */
+const CHECK_ICON_SVG = '<svg viewBox="0 0 24 24" width="14" height="14" aria-hidden="true" focusable="false"><path d="M9 16.2 4.8 12l-1.4 1.4L9 19 21 7l-1.4-1.4L9 16.2z" fill="currentColor"/></svg>';
+const CROSS_ICON_SVG = '<svg viewBox="0 0 24 24" width="14" height="14" aria-hidden="true" focusable="false"><path d="M19 6.4 17.6 5 12 10.6 6.4 5 5 6.4 10.6 12 5 17.6 6.4 19 12 13.4 17.6 19 19 17.6 13.4 12z" fill="currentColor"/></svg>';
 
 /* 抽屉拉手方向箭头（SVG 矢量图标）：左箭头=折叠，右箭头=拉出 */
 const CHEVRON_LEFT_SVG = '<svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path d="M14 5 8 12l6 7" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg>';
@@ -133,6 +139,7 @@ const sidebar = document.getElementById('sidebar');
 const sidebarToggle = document.getElementById('sidebarToggle');
 const drawerBackdrop = document.getElementById('drawerBackdrop');
 const confirmLayoutBtn = document.getElementById('confirmLayoutBtn');
+const themeToggle = document.getElementById('themeToggle');
 
 let cw = 0, ch = 0;
 const dpr = Math.max(1, window.devicePixelRatio || 1);
@@ -448,7 +455,7 @@ function drawMarker(p, now) {
   if (isImpossible) {
     drawCipherIcon(sp.x, sp.y, ICON_PX, '#8a8a8a', 0.5);
   } else if (isNo) {
-    drawCipherIcon(sp.x, sp.y, ICON_PX, '#5b5b5b', 0.35);
+    drawCipherIcon(sp.x, sp.y, ICON_PX, STATE_COLORS.noCipher.c, 0.35);
     drawCross(sp.x, sp.y, MARKER_R * 0.95, '#ff3b30');
   } else if (isUnknown) {
     drawCipherIcon(sp.x, sp.y, ICON_PX, color, 0.45);
@@ -496,6 +503,16 @@ function setState(id, state) {
   if (engine && engine.isAlwaysSpawn(id) && (state === 'unknown' || state === 'noCipher')) return;
   // 锁定布局拦截：移除「未知 / 确认无密码机」中间态
   if (layoutLocked && (state === 'unknown' || state === 'noCipher')) return;
+  // 已点亮上限：点亮 5 台即可开门逃生（最多 5 台）
+  if (state === 'finish' && pointStates[id] !== 'finish') {
+    let finishCount = 0;
+    for (const pid in pointStates) if (pointStates[pid] === 'finish') finishCount++;
+    if (finishCount >= 5) {
+      brushHint.textContent = '最多点亮 5 台即可开门逃生';
+      brushHint.classList.add('on');
+      return;
+    }
+  }
   pointStates[id] = state;
   updateLegend();
   updateStatus();
@@ -556,7 +573,7 @@ function updateConfirmLayoutBtn() {
     confirmLayoutBtn.disabled = true;
     confirmLayoutBtn.classList.remove('is-ready');
     confirmLayoutBtn.classList.add('is-locked');
-    confirmLayoutBtn.textContent = '🔒 布局已锁定';
+    confirmLayoutBtn.textContent = '布局已锁定';
   } else {
     const unique = !!(linkage && linkage.matched.length === 1);
     confirmLayoutBtn.classList.remove('is-locked');
@@ -592,23 +609,11 @@ function updateStatus() {
   const matched = linkage.matched;
 
   const countEl = document.getElementById('remainingCount');
-  const statusBadge = document.getElementById('statusBadge');
-  const statusText = document.getElementById('statusText');
-  const bar = document.getElementById('linkageBar');
 
   if (layoutLocked) {
-    countEl.textContent = '7';
+    countEl.textContent = '1';
     countEl.classList.add('locked');
     countEl.classList.remove('conflict');
-    statusBadge.textContent = '🔒 布局已确认';
-    statusBadge.className = 'status-badge lock';
-    statusText.textContent = '已锁定唯一布局：点击密码机 / 图例可切换状态（未破译 · 小遗产 · 大遗产 · 已点亮）；点击右上角【重置】解除锁定';
-    const stCount = { hasCipher: 0, small: 0, big: 0, finish: 0 };
-    if (lockedGroup) for (const pid of lockedGroup.points) {
-      const s = pointStates[pid];
-      if (stCount[s] !== undefined) stCount[s]++;
-    }
-    bar.innerHTML = '锁定方案：<b>' + (lockedGroup ? lockedGroup.name : '—') + '</b>　未破译 <b>' + stCount.hasCipher + '</b> · 小遗产 <b>' + stCount.small + '</b> · 大遗产 <b>' + stCount.big + '</b> · 已点亮 <b>' + stCount.finish + '</b>';
     updatePresetList();
     updateConfirmLayoutBtn();
     return;
@@ -617,31 +622,6 @@ function updateStatus() {
   countEl.textContent = matched.length;
   countEl.classList.toggle('locked', matched.length === 1);
   countEl.classList.toggle('conflict', matched.length === 0);
-
-  if (matched.length === 1) {
-    statusBadge.textContent = '🔒 刷点' + matched[0].name;
-    statusBadge.className = 'status-badge lock';
-    statusText.textContent = '已锁定唯一方案，未标记点位已高亮为「推导密码机」';
-  } else if (matched.length === 0) {
-    statusBadge.textContent = '⚠️ 无匹配方案';
-    statusBadge.className = 'status-badge conflict';
-    statusText.textContent = '标记存在矛盾，请复查点位状态';
-  } else {
-    statusBadge.textContent = '';
-    statusBadge.className = 'status-badge';
-    statusText.textContent = '继续标记点位以缩小范围（还剩 ' + matched.length + ' 组候选）';
-  }
-
-  // 联动信息条
-  let html = '匹配组：<b>' + (matched.length ? matched.map(g => g.name).join('、') : '无') + '</b>';
-  if (engine.alwaysSpawn.size) {
-    html += '　<span class="star">★</span>必刷点：<b>' + [...engine.alwaysSpawn].map(id => pointNum(id) + '号').join('、') + '</b>';
-  }
-  html += '　已选 <b>' + linkage.sel.size + '</b> · 排除 <b>' + linkage.excl.size + '</b>';
-  if (linkage.companions.size) {
-    html += '　<span style="color:' + CIPHER_BLUE + '">伴生</span>：<b>' + [...linkage.companions].map(id => pointNum(id) + '号').join('、') + '</b>';
-  }
-  bar.innerHTML = html;
 
   updatePresetList();
   updateConfirmLayoutBtn();
@@ -655,8 +635,9 @@ function buildLegend() {
     item.type = 'button';
     item.className = 'legend-item';
     item.dataset.state = s;
+    item.setAttribute('aria-pressed', 'false');
     item.innerHTML =
-      '<canvas class="legend-canvas" width="26" height="26"></canvas>' +
+      '<canvas class="legend-canvas" width="72" height="72"></canvas>' +
       '<span class="legend-label">' + meta.label + '</span>' +
       '<span class="legend-count">0</span>';
     item.addEventListener('click', () => setBrush(s));
@@ -667,27 +648,29 @@ function buildLegend() {
 
 function paintLegendSwatch(cv, state) {
   const c = cv.getContext('2d');
-  const S = 26;
-  c.clearRect(0, 0, S, S);
+  const L = 36;                 // 逻辑尺寸（与 .legend-canvas 的 36px 对应）
+  const s = cv.width / L;       // 高 DPR 缩放（canvas 属性 72 → 2x）
+  c.setTransform(s, 0, 0, s, 0, 0);
+  c.clearRect(0, 0, L, L);
   c.save();
-  c.translate(S / 2, S / 2);
+  c.translate(L / 2, L / 2);
   if (state === 'noCipher') {
     c.save();
-    c.globalAlpha = 0.35;
-    c.fillStyle = '#5b5b5b';
-    drawCipherTo(c, 20);
+    c.globalAlpha = 0.4;
+    c.fillStyle = STATE_COLORS.noCipher.c;
+    drawCipherTo(c, 26);
     c.restore();
     c.strokeStyle = '#ff3b30';
-    c.lineWidth = 2.4;
+    c.lineWidth = 2.8;
     c.lineCap = 'round';
     c.beginPath();
-    c.moveTo(-7, -7); c.lineTo(7, 7);
-    c.moveTo(7, -7); c.lineTo(-7, 7);
+    c.moveTo(-8, -8); c.lineTo(8, 8);
+    c.moveTo(8, -8); c.lineTo(-8, 8);
     c.stroke();
   } else {
     c.globalAlpha = state === 'unknown' ? 0.45 : 1;
     c.fillStyle = STATE_COLORS[state].c;
-    drawCipherTo(c, 20);
+    drawCipherTo(c, 32);
   }
   c.restore();
 }
@@ -707,6 +690,7 @@ function updateLegend() {
     if (!el) return;
     el.querySelector('.legend-count').textContent = counts[s];
     el.classList.toggle('brush-active', activeBrush === s);
+    el.setAttribute('aria-pressed', String(activeBrush === s));
     el.classList.toggle('is-disabled', layoutLocked && (s === 'unknown' || s === 'noCipher'));
   });
 }
@@ -735,7 +719,6 @@ function buildPresetList() {
     chip.innerHTML =
       '<div class="preset-head">' +
         '<span class="preset-name">刷点' + p.name + '</span>' +
-        '<span class="preset-count">' + p.points.length + ' 台</span>' +
       '</div>' +
       '<div class="preset-status"></div>';
     chip.addEventListener('mouseenter', () => { previewIds = new Set(p.points); });
@@ -746,6 +729,8 @@ function buildPresetList() {
 
 function updatePresetList() {
   const matchedIds = new Set(linkage.matched.map(g => g.id));
+  // 仅当真正发生筛选/锁定时才显示匹配状态，避免默认全「匹配」误导
+  const hasFilter = layoutLocked || linkage.matched.length < engine.groupCount;
   currentData.presets.forEach(p => {
     const chip = document.querySelector('.preset-chip[data-group="' + p.id + '"]');
     if (!chip) return;
@@ -754,11 +739,16 @@ function updatePresetList() {
     chip.classList.toggle('is-filtered', !isIn);
     chip.classList.toggle('is-locked', linkage.matched.length === 1 && isIn);
     const status = chip.querySelector('.preset-status');
+    if (!hasFilter) {
+      status.innerHTML = '';
+      status.className = 'preset-status';
+      return;
+    }
     if (isIn) {
-      status.textContent = '✓ 匹配';
+      status.innerHTML = CHECK_ICON_SVG + '<span>匹配</span>';
       status.className = 'preset-status ok';
     } else {
-      status.textContent = '✕ 排除（' + (reasonFor(p) || '矛盾') + '）';
+      status.innerHTML = CROSS_ICON_SVG + '<span>排除（' + (reasonFor(p) || '矛盾') + '）</span>';
       status.className = 'preset-status no';
     }
   });
@@ -779,7 +769,10 @@ function buildMenu() {
 }
 function setActiveMenu(name) {
   document.querySelectorAll('.map-item').forEach(el => {
-    el.classList.toggle('active', el.dataset.map === name);
+    const active = el.dataset.map === name;
+    el.classList.toggle('active', active);
+    if (active) { el.setAttribute('aria-current', 'page'); }
+    else { el.removeAttribute('aria-current'); }
   });
 }
 
@@ -866,6 +859,30 @@ function bindSidebarToggle() {
   // 点击遮罩层（或地图区域）自动收起抽屉
   drawerBackdrop.addEventListener('click', () => {
     setSidebarCollapsed(true);
+  });
+}
+
+/* ===================== 深色模式切换 ===================== */
+const THEME_KEY = 'idvTheme';
+const MOON_SVG = '<svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true" focusable="false"><path fill="currentColor" d="M12 3c-4.97 0-9 4.03-9 9s4.03 9 9 9 9-4.03 9-9c0-.46-.04-.92-.1-1.36-.98 1.37-2.58 2.26-4.4 2.26-2.98 0-5.4-2.42-5.4-5.4 0-1.81.89-3.42 2.26-4.4-.44-.06-.9-.1-1.36-.1z"/></svg>';
+const SUN_SVG = '<svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true" focusable="false"><path fill="currentColor" d="M12 7c-2.76 0-5 2.24-5 5s2.24 5 5 5 5-2.24 5-5-2.24-5-5-5zM2 13h2c.55 0 1-.45 1-1s-.45-1-1-1H2c-.55 0-1 .45-1 1s.45 1 1 1zm18 0h2c.55 0 1-.45 1-1s-.45-1-1-1h-2c-.55 0-1 .45-1 1s.45 1 1 1zM11 2v2c0 .55.45 1 1 1s1-.45 1-1V2c0-.55-.45-1-1-1s-1 .45-1 1zm0 18v2c0 .55.45 1 1 1s1-.45 1-1v-2c0-.55-.45-1-1-1s-1 .45-1 1zM5.99 4.58c-.39-.39-1.03-.39-1.41 0-.39.39-.39 1.03 0 1.41l1.06 1.06c.39.39 1.03.39 1.41 0s.39-1.03 0-1.41L5.99 4.58zm12.37 12.37c-.39-.39-1.03-.39-1.41 0-.39.39-.39 1.03 0 1.41l1.06 1.06c.39.39 1.03.39 1.41 0 .39-.39.39-1.03 0-1.41l-1.06-1.06zm1.06-10.96c.39-.39.39-1.03 0-1.41-.39-.39-1.03-.39-1.41 0l-1.06 1.06c-.39.39-.39 1.03 0 1.41s1.03.39 1.41 0l1.06-1.06zM7.05 18.36c.39-.39.39-1.03 0-1.41-.39-.39-1.03-.39-1.41 0l-1.06 1.06c-.39.39-.39 1.03 0 1.41s1.03.39 1.41 0l1.06-1.06z"/></svg>';
+
+function applyTheme(dark) {
+  document.documentElement.classList.toggle('md3-light', !dark);
+  themeToggle.innerHTML = dark ? SUN_SVG : MOON_SVG;
+  themeToggle.title = dark ? '切换到亮色模式' : '切换到深色模式';
+  themeToggle.setAttribute('aria-label', themeToggle.title);
+  themeToggle.setAttribute('aria-pressed', String(dark));
+}
+
+function initTheme() {
+  let dark = false;
+  try { dark = localStorage.getItem(THEME_KEY) === 'dark'; } catch (e) { /* ignore */ }
+  applyTheme(dark);
+  themeToggle.addEventListener('click', () => {
+    const nextDark = document.documentElement.classList.contains('md3-light');
+    applyTheme(nextDark);
+    try { localStorage.setItem(THEME_KEY, nextDark ? 'dark' : 'light'); } catch (e) { /* ignore */ }
   });
 }
 
@@ -1010,6 +1027,7 @@ async function init() {
   buildLegend();
   bindEvents();
   bindSidebarToggle();
+  initTheme();
   resizeCanvas();
   fitView();
   await loadMap(DEFAULT_MAP);

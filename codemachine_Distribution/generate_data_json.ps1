@@ -60,7 +60,7 @@ foreach ($map in $maps) {
 
     $obj = [ordered]@{
         mapName       = $map
-        bgImage       = ('map_pic/' + $map + '_基本信息_无名称点.png')
+        bgImage       = ('assets/maps/' + $map + '_基本信息_无名称点.png')
         bgImageRemote = $bgRemote
         aspectW       = $w
         aspectH       = $h
