@@ -1,0 +1,12 @@
+{
+  "name": "idv-map-tools",
+  "version": "1.0.0",
+  "private": true,
+  "description": "第五人格 · 密码机刷点推导工具（Canvas 推导 + 规则引擎）",
+  "scripts": {
+    "tokens": "node scripts/generate-m3-tokens.mjs"
+  },
+  "devDependencies": {
+    "@material/material-color-utilities": "^0.3.0"
+  }
+}

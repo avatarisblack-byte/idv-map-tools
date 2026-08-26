@@ -1,5 +1,6 @@
 # 依赖 / 构建产物
 node_modules/
+.npm-cache/
 dist/
 build/
 
