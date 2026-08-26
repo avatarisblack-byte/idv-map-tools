@@ -12,22 +12,27 @@
 ├── style.css             # 全部样式（MD3 主题：语义 Token + 组件样式 + 响应式 + 减动效 + 新手指引）
 ├── app.js                # ★ 核心逻辑（ES Module）：fetch 加载、Canvas 渲染、缩放平移、点位勾选、联动渲染、DOM 更新
 ├── rule-engine.js        # ★ 刷点联动规则引擎（ES Module）：必刷/互斥/伴生/组合过滤，纯数据驱动
-├── tour.js               # 新手指引（Onboarding Tour，5 步）：聚光灯遮罩 + 自动定位引导卡片 + step.link 链接 + localStorage 记忆
+├── tour.js               # 新手指引（Onboarding Tour，6 步）：聚光灯遮罩（无目标步骤高亮气泡本体）+ 自动定位引导卡片 + step.link 链接 + localStorage 记忆
 ├── package.json          # npm 清单（devDependency: @material/material-color-utilities；脚本 npm run tokens）
+├── README.md             # 项目说明（功能 / 快速开始 / 操作 / 目录结构 / 数据来源）
 ├── scripts/
 │   └── generate-m3-tokens.mjs  # MD3 Token 生成器（构建期运行，产出 src/styles/md3-tokens.css）
 ├── src/styles/
 │   └── md3-tokens.css    # ★ 全局 MD3 设计 Token（自动生成：Dynamic Color 亮/暗 + Surface Container + Shape + Elevation + Typeface）
 ├── .claude/skills/
 │   └── material-design-3-ui/   # 项目级 Agent Skill（MD3 设计/审查规范，SKILL.md + references/*）
-├── data/                 # 9 张地图坐标 JSON（运行期由 app.js fetch 加载，bgImage 指向 assets/maps/）
-├── assets/               # 全部美术资源（统一收纳）
-│   ├── icons/            # bilibili.svg / github.svg / 地图.svg / 定位.svg（品牌与 UI 图标）
-│   ├── cipher/           # 密码机 6 态 SVG + 密码机.png/svg（已内联为 Path2D，仅作参考）
-│   └── maps/             # 9 张地图底图 PNG（<地图名>_基本信息_无名称点.png）
+├── maps/                 # ★ 地图资料统一收纳（运行期数据 + 底图 + 数据源 + 抽取工具）
+│   ├── data/             # 9 张地图坐标 JSON（运行期由 app.js fetch 加载，bgImage 指向 maps/images/）
+│   ├── images/           # 9 张地图底图 PNG（<地图名>_基本信息_无名称点.png）
+│   ├── names/            # 名称点位 JSON（运行期由 app.js fetch 加载，text/door 标注）
+│   ├── ciphers/          # 密码机刷点 JSON（抽取中间产物 + 汇总）
+│   ├── raw/              # 原始 BWIKI 地图源码 txt（数据源）
+│   └── scripts/          # 抽取/生成脚本（batch_extract_cipher.py / extract_named_points.py / generate_data_json.ps1）
+├── assets/               # 其余美术资源（图标 + 密码机参考 SVG；地图底图已移至 maps/images/）
+│   ├── icons/            # bilibili.svg / github.svg / 指南.svg / 地图.svg / 定位.svg（品牌与 UI 图标）
+│   └── cipher/           # 密码机 6 态 SVG + 密码机.png/svg（已内联为 Path2D，仅作参考）
 ├── serve.js              # 本地服务器：Node 静态服务器（node serve.js）
-├── 一键启动.bat           # 本地服务器：零依赖 PowerShell HttpListener（双击即用）
-└── codemachine_Distribution/   # 数据源与抽取工具（BWIKI 原始 txt → 汇总 JSON → data/*.json）
+└── 一键启动.bat           # 本地服务器：零依赖 PowerShell HttpListener（双击即用）
 ```
 
 **运行方式**（二者选一，均需 HTTP，`app.js` 用 `fetch` + ES Module，`file://` 会被浏览器拦截）：
@@ -63,23 +68,27 @@
 │   │   ├── .status-left      # 「剩余匹配刷点方案 N 组」（N 锁定=tertiary / 冲突=error）
 │   │   └── .status-right     # 确认布局(Filled) + 缩放(Icon ×3, aria-label) + 重置(Outlined)
 │   ├── .workspace            # .map-frame（无框）> .map-wrap（深色底 #0a0907，12px 圆角）> #mapCanvas + .map-title（左上角，定位图标=assets/icons/定位.svg 内联）
-│   ├── .brush-hint           # 画笔提示
-│   └── .app-footer           # 说明文字 + .footer-actions（三按钮：新手引导 / Bilibili Wiki / GitHub，后两者带品牌图标居左）
+│   ├── .brush-hint           # 操作提示（默认=左键/右键/悬停/滚轮/拖拽；.on 金色高亮 / .warn 红色胶囊=点亮 5 台上限拦截）
+│   └── .app-footer           # .footer-actions（三按钮：新手引导 / Bilibili Wiki / GitHub，均带图标居左）
 └── .right-panel#rightPanel   # 右侧控制栏（surface-container-low，无左边框）
-    ├── #themeToggle          # 深色模式切换（Icon Button，靠右上角，月亮/太阳 SVG）
+    ├── .panel-tools          # 顶部工具行（靠右）：快速确认 + 名称标注开关 + 主题切换
+    │   ├── #autoConfirmToggle # 快速确认开关（MD3 Switch + 标签，aria-checked），开启后匹配唯一时自动 lockLayout
+    │   ├── #nameToggle       # 名称标注开关（MD3 Switch：52×32 轨道 + 16px 手柄 + 标签，aria-checked），控制地图名称标注层显隐
+    │   └── #themeToggle      # 深色模式切换（Icon Button，月亮/太阳 SVG）
     ├── .panel#legendPanel    # 卡片（filled: surface-container-highest，无描边/阴影）
-    │   └── .legend           # 状态图例 = Filter Chip（.legend-item 56px、圆形暗色底座、对称 2 列网格，aria-pressed）
-    └── .panel                # 卡片：刷点方案（.preset-chip 2 列网格；悬停 state-layer；筛选/锁定后显示 SVG 对勾/叉；is-filtered 降透明 / is-locked tertiary 文字）
+    │   ├── .legend           # 状态图例 = Filter Chip（.legend-item 56px、圆形暗色底座、对称 2 列网格，aria-pressed）
+    │   └── .linkage-legend   # 联动关系图例（只读：伴生/互斥/必刷，暗色圆底座 36px、去发光、无边框不可交互，分隔于状态图例下方）
+    └── .panel#presetPanel    # 卡片：刷点方案（.preset-chip 2 列网格；悬停 state-layer；点击直接确认布局 lockLayout；筛选/锁定后显示 SVG 对勾/叉；is-filtered 降透明 / is-locked tertiary 文字）
 ```
 
 ---
 
-## 2. 数据结构（data/*.json 示例）
+## 2. 数据结构（maps/data/*.json 示例）
 
 ```json
 {
   "mapName": "军工厂",
-  "bgImage": "assets/maps/军工厂_基本信息_无名称点.png",
+  "bgImage": "maps/images/军工厂_基本信息_无名称点.png",
   "bgImageRemote": "https://patchwiki.biligame.com/images/dwrg/4/44/7kg6dzhfjvhvjvdxf7xg2zbpq6yzovs.png",
   "aspectW": 699,
   "aspectH": 600,
@@ -102,6 +111,12 @@
 | `presets[].points` | 该固定刷点组包含的点位 id（每局 7 台） |
 
 > `rule-engine.js` 兼容 `groups` / `presets` 两种键名。
+
+### 名称标注数据（maps/names/<地图名>_名称点位.json）
+
+数组，每项 `{ name, type, x, y }`；`x/y` 同为 0~100 百分比，与 `allPoints` 坐标一致。
+- `type`：`text`（区域/建筑名）、`door`（大门/小门）、`chair`（椅子编号）、`box`/`component1`（二层标记）等。
+- `app.js` 仅保留 `text` 与 `door` 两类；再过滤图例说明文字——含「地下室 / 椅子数目 / 刷点」关键词，或纯圈数字（①-⑳ 与顿号）组合。加载失败静默降级为空数组。
 
 ---
 
@@ -150,7 +165,8 @@ hoveredId / previewIds / activeBrush / mapImage / engine / currentData  // 瞬�
 requestAnimationFrame(loop) → draw(now)：
   1) setTransform(dpr) + clearRect
   2) 底图（save → translate(tx,ty) → scale(scale) → drawImage → restore）
-  3) 遍历 allPoints → drawMarker(p, now)
+  3) drawNameMarks()：名称标注层（#nameToggle 开启时；屏幕恒定字号 13px、globalAlpha 0.62 半透明，text=暖白 #f5efe4 / door=品牌金 #ecc246，绘制在密码机标记下层）
+  4) 遍历 allPoints → drawMarker(p, now)
 ```
 
 ### 4.3 交互 → 状态 → 联动链路
@@ -169,7 +185,7 @@ setState → updateLegend() → updateStatus() → recompute() → filterGroups 
 - **必须 HTTP 访问**：`fetch` 加载 JSON + ES Module 导入，`file://` 下被浏览器拦截。
 - **坐标**：`x/y` 为 0~100 百分比；缩放时点位图标保持固定屏幕尺寸。
 - **状态语义**：`hasCipher/small/big/finish` 归「有密码机」（必须包含），`noCipher` 为「排除」；`finish`（已点亮）最多 5 台——点亮 5 台即可开门逃生，超限在 `setState` 拦截。
-- **规则引擎零硬编码**：新增地图只需 `data/` 放 JSON + `app.js` 的 `MAP_LIST` 加名。
+- **规则引擎零硬编码**：新增地图只需 `maps/data/` 放 JSON + `app.js` 的 `MAP_LIST` 加名。
 - **图标**：密码机造型内联为 `Path2D`（`CIPHER_BODY/CIPHER_ANTENNA/CIPHER_HALO`）。
 - **MD3 合规要点**（依 `.claude/skills/material-design-3-ui`）：
   - Top App Bar / 卡片 / 抽屉用 **surface-container 语义角色**，不用描边圆角盒或装饰阴影；
@@ -177,5 +193,5 @@ setState → updateLegend() → updateStatus() → recompute() → filterGroups 
   - 阴影仅保留 drawer / tooltip / popover 等悬浮层；
   - 状态层用 `color-mix`（on-surface 8%/12%）。
 - **无障碍**：全局 `:focus-visible` 主色焦点环；图标按钮带 `aria-label`；图例 `aria-pressed`；地图菜单 `aria-current=page`；`prefers-reduced-motion` 关闭动效。
-- **新手指引**：5 步（Step 5 = 数据来源与开源仓库，含 GitHub 链接按钮），完成/跳过写 `localStorage.hasCompletedTour=true`。
+- **新手指引**：7 步（Step 4 = 右上角快捷开关：快速确认 / 名称标注 / 深色模式；Step 6 = 刷点方案，点击可快速确认布局；Step 7 = 数据来源与开源仓库，居中气泡并高亮气泡本体，含 GitHub 链接按钮），完成/跳过写 `localStorage.hasCompletedTour=true`。
 - **动效令牌**：`--ease-out / --ease-in-out / --ease-drawer`；仅动画 `transform/opacity/color/border/background/box-shadow`。

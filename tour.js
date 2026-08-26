@@ -98,6 +98,7 @@ export function mountTour({ steps = [], storageKey = DEFAULT_STORAGE_KEY } = {})
 
   /* 目标矩形：支持单个选择器或选择器数组（取并集） */
   function targetRect(step) {
+    if (!step.target) return null;
     const sels = Array.isArray(step.target) ? step.target : [step.target];
     const rects = [];
     for (const sel of sels) {
@@ -120,7 +121,23 @@ export function mountTour({ steps = [], storageKey = DEFAULT_STORAGE_KEY } = {})
 
   /* ---------- 定位：聚光灯 ---------- */
   function positionSpotlight(rect) {
-    if (!rect) { spotlight.style.display = 'none'; return; }
+    if (!rect) {
+      // 无目标（居中气泡）步骤：聚光灯直接高亮整个提示气泡。
+      // 用「居中公式 + offsetWidth/offsetHeight」而非 getBoundingClientRect，
+      // 避免气泡 left/top 过渡期间取到插值位置导致亮区偏移。
+      const pw = popover.offsetWidth;
+      const ph = popover.offsetHeight;
+      const vw = window.innerWidth;
+      const vh = window.innerHeight;
+      const cx = Math.max(MARGIN, (vw - pw) / 2);   // 与 positionPopover 居中公式一致
+      const cy = Math.max(MARGIN, (vh - ph) / 2);
+      spotlight.style.display = 'block';
+      spotlight.style.left = (cx - PAD) + 'px';
+      spotlight.style.top = (cy - PAD) + 'px';
+      spotlight.style.width = (pw + PAD * 2) + 'px';
+      spotlight.style.height = (ph + PAD * 2) + 'px';
+      return;
+    }
     spotlight.style.display = 'block';
     spotlight.style.left = (rect.left - PAD) + 'px';
     spotlight.style.top = (rect.top - PAD) + 'px';
@@ -209,8 +226,8 @@ export function mountTour({ steps = [], storageKey = DEFAULT_STORAGE_KEY } = {})
   function reposition() {
     if (!active) return;
     const rect = targetRect(steps[current]);
-    positionSpotlight(rect);
     positionPopover(rect);
+    positionSpotlight(rect);
   }
 
   /* ---------- 步骤渲染 ---------- */
@@ -231,8 +248,8 @@ export function mountTour({ steps = [], storageKey = DEFAULT_STORAGE_KEY } = {})
     // 待内容渲染完成后测量尺寸再定位
     requestAnimationFrame(() => {
       const rect = targetRect(step);
-      positionSpotlight(rect);
       positionPopover(rect);
+      positionSpotlight(rect);
       popover.focus();
     });
   }
@@ -243,7 +260,20 @@ export function mountTour({ steps = [], storageKey = DEFAULT_STORAGE_KEY } = {})
     document.body.classList.add('tour-active');
     blocker.style.display = 'block';
     popover.style.display = 'block';
+
+    // 首次显示：临时禁用位移过渡，避免 popover/spotlight 从上次关闭时的残留位置「飞来」；
+    // 入场只保留淡入动画（tour-pop-in / tour-spot-in），定位完成后恢复过渡供步骤间平滑移动。
+    popover.style.transition = 'none';
+    spotlight.style.transition = 'none';
+
     showStep(0);
+
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        popover.style.transition = '';
+        spotlight.style.transition = '';
+      });
+    });
   }
 
   function complete() {

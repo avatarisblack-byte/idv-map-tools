@@ -13,7 +13,7 @@ import { mountTour } from './tour.js';
 const STATE_ORDER = ['unknown', 'noCipher', 'hasCipher', 'small', 'big', 'finish'];
 const STATE_META = {
   unknown:   { label: '未知',              short: '未知' },
-  noCipher:  { label: '无密码机',           short: '无' },
+  noCipher:  { label: '无电机',           short: '无' },
   hasCipher: { label: '未破译',             short: '未' },
   small:     { label: '小遗产',   short: '小' },
   big:       { label: '大遗产',   short: '大' },
@@ -27,14 +27,14 @@ const HAS_FAMILY = ['hasCipher', 'small', 'big', 'finish'];
 const STATE_COLORS = {
   unknown:   { c: '#b7b0a3', glow: null },                                   // 中性暖灰（onSurfaceVariant）
   noCipher:  { c: '#7d7668', glow: null },                                   // 弱化暖灰（outline）+ 红✕
-  hasCipher: { c: '#8bc2ee', glow: 'rgba(139,194,238,0.55)' },               // 信息蓝（功能性对比色，保留）
-  small:     { c: '#adcfad', glow: 'rgba(173,207,173,0.6)' },                // 灰绿（tertiary）
+  hasCipher: { c: '#4fb3ff', glow: 'rgba(79,179,255,0.6)' },                 // 信息蓝（更鲜明，提高与小遗产绿的区分度）
+  small:     { c: '#4ade80', glow: 'rgba(74,222,128,0.6)' },                 // 鲜明绿（更高饱和、更亮）
   big:       { c: '#ff5c4d', glow: 'rgba(255,92,77,0.8)' },                  // 饱和暖红（高强调）
   finish:    { c: '#ffd24a', glow: 'rgba(255,210,74,0.75)' }                 // 亮金（"点亮"，醒目）
 };
 
 /* 「未破译」统一蓝：可用/确定密码机标记的标准蓝 */
-const CIPHER_BLUE = '#8bc2ee';
+const CIPHER_BLUE = '#4fb3ff';
 
 /* 预设方案状态图标（内联 SVG，替代字体 ✓/✕） */
 const CHECK_ICON_SVG = '<svg viewBox="0 0 24 24" width="14" height="14" aria-hidden="true" focusable="false"><path d="M9 16.2 4.8 12l-1.4 1.4L9 19 21 7l-1.4-1.4L9 16.2z" fill="currentColor"/></svg>';
@@ -66,7 +66,12 @@ const TOUR_STEPS = [
   {
     target: ['#confirmLayoutBtn', '#resetBtn'],
     title: '确认布局（核心功能）',
-    text: '这是推导的核心工具！当排查至方案唯一（剩余 1 组）时，点击「确认布局」即可锁定场上真实的 7 台密码机；遇到标记错误需要重新分析时，点击「重置」即可恢复。'
+    text: '这是推导的核心工具！当排查至方案唯一（剩余 1 组）时，点击「确认布局」即可锁定场上真实的 7 台密码机；遇到标记错误需要重新分析时，点击「重置」即可恢复。\n提示：锁定布局后，按下「重置」按钮才能解除锁定。'
+  },
+  {
+    target: ['#autoConfirmToggle', '#nameToggle', '#themeToggle'],
+    title: '右上角快捷开关',
+    text: '• 快速确认：匹配仅剩 1 组时自动锁定布局，省去手动点击「确认布局」\n• 名称标注：在地图上显示 / 隐藏区域与大门名称\n• 深色模式：在亮 / 暗主题间切换（记住你的选择）'
   },
   {
     target: '#legendPanel',
@@ -74,7 +79,12 @@ const TOUR_STEPS = [
     text: '在此处实时查看各类密码机的数量统计；直接点击特定图例可快速切换或辅助筛选点位状态。'
   },
   {
-    target: '.status-panel',
+    target: '#presetPanel',
+    title: '刷点方案',
+    text: '点击刷点方案可快速确认布局'
+  },
+  {
+    target: null,
     title: '数据来源与开源项目',
     text: '• 数据致谢：本项目涉及的所有点位数据及地图资源均整合自 Bilibili 第五人格 Wiki。\n• 开源仓库：本项目已在 GitHub 完全开源，欢迎提交 Issue 交流反馈或给项目点个 Star 🌟！',
     link: { text: '前往 GitHub 仓库 →', href: 'https://github.com/avatarisblack-byte/idv-map-tools' }
@@ -114,6 +124,9 @@ let linkage = null;          // 最近一次推导结果
 let pointStates = {};        // id -> state key
 let activeBrush = null;      // null = 循环模式
 let mapImage = null;         // 底图 Image
+let nameMarks = [];          // 地图名称标注（仅 text / door 类型）
+let showNames = false;       // 名称标注开关
+let autoConfirm = false;     // 快速确认开关（匹配唯一时自动锁定布局）
 let previewIds = new Set();  // 方案列表悬停预览点位
 let hoveredId = null;        // 当前悬停的点位
 let layoutLocked = false;    // 是否已锁定全局布局（点击「确认布局」后）
@@ -140,6 +153,8 @@ const sidebarToggle = document.getElementById('sidebarToggle');
 const drawerBackdrop = document.getElementById('drawerBackdrop');
 const confirmLayoutBtn = document.getElementById('confirmLayoutBtn');
 const themeToggle = document.getElementById('themeToggle');
+const nameToggle = document.getElementById('nameToggle');
+const autoConfirmToggle = document.getElementById('autoConfirmToggle');
 
 let cw = 0, ch = 0;
 const dpr = Math.max(1, window.devicePixelRatio || 1);
@@ -180,21 +195,6 @@ function drawCross(x, y, r, color) {
   ctx.beginPath();
   ctx.moveTo(x - k, y - k); ctx.lineTo(x + k, y + k);
   ctx.moveTo(x + k, y - k); ctx.lineTo(x - k, y + k);
-  ctx.stroke();
-  ctx.restore();
-}
-
-function drawSlash(x, y, r, color) {
-  ctx.save();
-  ctx.strokeStyle = color;
-  ctx.lineWidth = 2.4;
-  ctx.lineCap = 'round';
-  ctx.shadowColor = 'rgba(255,59,48,0.6)';
-  ctx.shadowBlur = 5;
-  const k = r * 0.78;
-  ctx.beginPath();
-  ctx.moveTo(x - k, y + k);
-  ctx.lineTo(x + k, y - k);
   ctx.stroke();
   ctx.restore();
 }
@@ -243,7 +243,7 @@ function drawCompanionRing(x, y, strong) {
   ctx.beginPath();
   ctx.arc(x, y, MARKER_R + 6, 0, Math.PI * 2);
   ctx.setLineDash([5, 4]);
-  ctx.strokeStyle = strong ? 'rgba(139,194,238,0.95)' : 'rgba(139,194,238,0.5)';
+  ctx.strokeStyle = strong ? 'rgba(79,179,255,0.95)' : 'rgba(79,179,255,0.5)';
   ctx.lineWidth = 2;
   if (strong) { ctx.shadowColor = 'rgba(74,168,255,0.7)'; ctx.shadowBlur = 10; }
   ctx.stroke();
@@ -356,7 +356,29 @@ function draw(now) {
   ctx.drawImage(mapImage, 0, 0, imgW, imgH);
   ctx.restore();
 
+  drawNameMarks();   // 名称标注层：绘制在密码机标记下层
+
   for (const p of currentData.allPoints) drawMarker(p, now);
+}
+
+/* 名称标注层：半透明、位于密码机标记下层（text=暖白，door=品牌金）
+ * 文字采用屏幕恒定字号，与点位标记一致、不随地图缩放（大图适应窗口后依然清晰） */
+function drawNameMarks() {
+  if (!showNames || !nameMarks.length || !currentData) return;
+  ctx.save();
+  ctx.globalAlpha = 0.62;
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.font = '500 13px "Noto Sans SC", "Microsoft YaHei", sans-serif';
+  ctx.shadowColor = 'rgba(0,0,0,0.85)';
+  ctx.shadowBlur = 3;
+  ctx.shadowOffsetY = 1;
+  for (const m of nameMarks) {
+    const sp = mapToScreen((m.x / 100) * imgW, (m.y / 100) * imgH);
+    ctx.fillStyle = m.type === 'door' ? '#ecc246' : '#f5efe4';
+    ctx.fillText(m.name, sp.x, sp.y);
+  }
+  ctx.restore();
 }
 
 function drawMarker(p, now) {
@@ -474,7 +496,6 @@ function drawMarker(p, now) {
   ctx.restore();
 
   // ---- 覆盖层（不受置灰影响） ----
-  if (isImpossible) drawSlash(sp.x, sp.y, MARKER_R, '#ff3b30');
   if (isAlways) drawStarBadge(sp.x, sp.y);
 
   // 外圈高亮（按优先级取其一）
@@ -509,7 +530,8 @@ function setState(id, state) {
     for (const pid in pointStates) if (pointStates[pid] === 'finish') finishCount++;
     if (finishCount >= 5) {
       brushHint.textContent = '最多点亮 5 台即可开门逃生';
-      brushHint.classList.add('on');
+      brushHint.classList.remove('on');
+      brushHint.classList.add('warn');
       return;
     }
   }
@@ -560,7 +582,7 @@ function recompute() {
 function reasonFor(preset) {
   for (const id in pointStates) {
     const st = pointStates[id];
-    if (st === 'noCipher' && preset.points.includes(id)) return '点位' + pointNum(id) + '无密码机';
+    if (st === 'noCipher' && preset.points.includes(id)) return '点位' + pointNum(id) + '无电机';
     if (HAS_FAMILY.includes(st) && !preset.points.includes(id)) return '缺点位' + pointNum(id);
   }
   return null;
@@ -583,23 +605,33 @@ function updateConfirmLayoutBtn() {
   }
 }
 
-function confirmLayout() {
+function lockLayout(group) {
   if (layoutLocked) return;
-  if (!linkage || linkage.matched.length !== 1) return;
   layoutLocked = true;
-  lockedGroup = linkage.matched[0];
-  // 唯一方案内尚未标记的点位：确定为「未破译」密码机（移除未知/不存在中间态）
-  for (const pid of lockedGroup.points) {
+  lockedGroup = group;
+  // 方案外点位：清空标记（点击方案快速确认时，仅保留该方案 7 台真实密码机）
+  for (const p of currentData.allPoints) {
+    if (!group.points.has(p.id)) pointStates[p.id] = 'unknown';
+  }
+  // 方案内尚未确定（未知/无密码机）的点位：确定为「未破译」密码机
+  for (const pid of group.points) {
     if (pointStates[pid] === 'unknown' || pointStates[pid] === 'noCipher') {
       pointStates[pid] = 'hasCipher';
     }
   }
   activeBrush = null;
   brushHint.textContent = '布局已锁定：点击密码机 / 图例可切换 未破译 · 小遗产 · 大遗产 · 已点亮；点击右上角【重置】解除锁定';
+  brushHint.classList.remove('warn');
   brushHint.classList.add('on');
   updateLegend();
   updateConfirmLayoutBtn();
   updateStatus();
+}
+
+function confirmLayout() {
+  if (layoutLocked) return;
+  if (!linkage || linkage.matched.length !== 1) return;
+  lockLayout(linkage.matched[0]);
 }
 
 /* ===================== DOM 更新 ===================== */
@@ -616,6 +648,12 @@ function updateStatus() {
     countEl.classList.remove('conflict');
     updatePresetList();
     updateConfirmLayoutBtn();
+    return;
+  }
+
+  // 快速确认：开启且匹配唯一时自动锁定布局
+  if (autoConfirm && matched.length === 1) {
+    lockLayout(matched[0]);
     return;
   }
 
@@ -675,6 +713,80 @@ function paintLegendSwatch(cv, state) {
   c.restore();
 }
 
+/* ---- 联动关系图例（伴生 / 互斥 / 必刷）：与地图标记同造型、但去除发光（静态说明） ---- */
+const LINKAGE_LEGEND = [
+  { type: 'companion', label: '伴生' },
+  { type: 'exclusion', label: '互斥' },
+  { type: 'always',    label: '必刷' }
+];
+
+function buildLinkageLegend() {
+  const container = document.getElementById('linkageLegend');
+  if (!container) return;
+  const items = container.querySelector('.linkage-items');
+  if (!items) return;
+  items.innerHTML = '';
+  LINKAGE_LEGEND.forEach(it => {
+    const item = document.createElement('span');
+    item.className = 'linkage-item';
+    item.innerHTML =
+      '<canvas class="linkage-canvas" width="72" height="72"></canvas>' +
+      '<span class="linkage-label">' + it.label + '</span>';
+    items.appendChild(item);
+    paintLinkageSwatch(item.querySelector('.linkage-canvas'), it.type);
+  });
+}
+
+function paintLinkageSwatch(cv, type) {
+  const c = cv.getContext('2d');
+  const L = 36;
+  const s = cv.width / L;
+  c.setTransform(s, 0, 0, s, 0, 0);
+  c.clearRect(0, 0, L, L);
+  c.save();
+  c.translate(L / 2, L / 2);
+
+  if (type === 'exclusion') {
+    // 互斥：置灰淡化（无发光、无叉），alpha 略高以保留可辨识的密码机轮廓
+    c.globalAlpha = 0.6;
+    c.fillStyle = '#8a8a8a';
+    drawCipherTo(c, 28);
+  } else {
+    // 伴生 / 必刷：未知态暖灰密码机
+    c.globalAlpha = 0.9;
+    c.fillStyle = '#b7b0a3';
+    drawCipherTo(c, 28);
+    c.globalAlpha = 1;
+    if (type === 'companion') {
+      // 伴生：蓝色虚线圆环（无发光）
+      c.beginPath();
+      c.arc(0, 0, 16, 0, Math.PI * 2);
+      c.setLineDash([4, 3]);
+      c.strokeStyle = 'rgba(79,179,255,0.95)';
+      c.lineWidth = 2;
+      c.stroke();
+      c.setLineDash([]);
+    } else if (type === 'always') {
+      // 必刷：蓝色五角星（左上角，无发光）
+      const cx = -8, cy = -8, R = 7, r = 2.9;
+      c.beginPath();
+      for (let i = 0; i < 10; i++) {
+        const ang = -Math.PI / 2 + i * Math.PI / 5;
+        const rad = (i % 2 === 0) ? R : r;
+        const px = cx + Math.cos(ang) * rad, py = cy + Math.sin(ang) * rad;
+        if (i === 0) c.moveTo(px, py); else c.lineTo(px, py);
+      }
+      c.closePath();
+      c.fillStyle = CIPHER_BLUE;
+      c.fill();
+      c.strokeStyle = 'rgba(30,80,140,0.95)';
+      c.lineWidth = 1;
+      c.stroke();
+    }
+  }
+  c.restore();
+}
+
 function updateLegend() {
   const counts = {};
   STATE_ORDER.forEach(s => { counts[s] = 0; });
@@ -701,10 +813,12 @@ function setBrush(state) {
   activeBrush = (activeBrush === state) ? null : state;
   if (activeBrush) {
     brushHint.textContent = '画笔模式：「' + STATE_META[activeBrush].label + '」— 点击点位直接标记（再次点击图例取消）';
+    brushHint.classList.remove('warn');
     brushHint.classList.add('on');
   } else {
-    brushHint.textContent = '点击点位 = 状态轮换（右键 / 长按 = 回退）· 悬停查看联动关系';
+    brushHint.textContent = '左键 = 状态前进 · 右键 / 长按 = 状态回退 · 悬停查看联动关系 · 滚轮缩放 · 拖拽平移';
     brushHint.classList.remove('on');
+    brushHint.classList.remove('warn');
   }
   updateLegend();
 }
@@ -723,6 +837,10 @@ function buildPresetList() {
       '<div class="preset-status"></div>';
     chip.addEventListener('mouseenter', () => { previewIds = new Set(p.points); });
     chip.addEventListener('mouseleave', () => { previewIds = new Set(); });
+    chip.addEventListener('click', () => {
+      const group = engine.groups.find(g => g.id === p.id);
+      if (group) lockLayout(group);
+    });
     container.appendChild(chip);
   });
 }
@@ -747,6 +865,10 @@ function updatePresetList() {
     if (isIn) {
       status.innerHTML = CHECK_ICON_SVG + '<span>匹配</span>';
       status.className = 'preset-status ok';
+    } else if (layoutLocked) {
+      // 点击方案锁定后：不匹配方案无需显示排除原因（主动选择，原因无意义）
+      status.innerHTML = '';
+      status.className = 'preset-status';
     } else {
       status.innerHTML = CROSS_ICON_SVG + '<span>排除（' + (reasonFor(p) || '矛盾') + '）</span>';
       status.className = 'preset-status no';
@@ -791,7 +913,7 @@ async function loadMap(name) {
   setActiveMenu(name);
 
   try {
-    const res = await fetch('data/' + encodeURIComponent(name) + '.json');
+    const res = await fetch('maps/data/' + encodeURIComponent(name) + '.json');
     if (!res.ok) throw new Error('HTTP ' + res.status);
     const data = await res.json();
 
@@ -804,8 +926,9 @@ async function loadMap(name) {
     layoutLocked = false;
     lockedGroup = null;
     activeBrush = null;
-    brushHint.textContent = '点击点位 = 状态轮换（右键 / 长按 = 回退）· 悬停查看联动关系';
+    brushHint.textContent = '左键 = 状态前进 · 右键 / 长按 = 状态回退 · 悬停查看联动关系 · 滚轮缩放 · 拖拽平移';
     brushHint.classList.remove('on');
+    brushHint.classList.remove('warn');
     imgW = data.aspectW;
     imgH = data.aspectH;
 
@@ -816,11 +939,30 @@ async function loadMap(name) {
     updateLegend();
     updateStatus();
 
-    await loadImage(data);
+    await Promise.all([loadImage(data), loadNameMarks(name)]);
     fitView();
     showLoading(false);
   } catch (err) {
     showError('加载失败：请通过 HTTP 服务器访问（如双击「一键启动.bat」或 `npx serve`）。\n详情：' + err.message);
+  }
+}
+
+/* 加载地图名称标注（来自 maps/names/，仅 text / door） */
+async function loadNameMarks(name) {
+  try {
+    const res = await fetch('maps/names/' + encodeURIComponent(name) + '_名称点位.json');
+    if (!res.ok) { nameMarks = []; return; }
+    const list = await res.json();
+    nameMarks = list.filter(m => {
+      if (m.type !== 'text' && m.type !== 'door') return false;
+      const n = m.name;
+      // 排除图例说明文字：地下室椅子/箱子、全图椅子数、刷点组合、纯椅子编号
+      if (/地下室|椅子数目|刷点/.test(n)) return false;
+      if (/^[①-⑳、]+$/.test(n)) return false;
+      return true;
+    });
+  } catch (e) {
+    nameMarks = [];   // 名称数据缺失时静默降级，不影响主功能
   }
 }
 
@@ -956,6 +1098,15 @@ function bindEvents() {
   document.getElementById('zoomFitBtn').addEventListener('click', () => { fitView(); });
   confirmLayoutBtn.addEventListener('click', confirmLayout);
   document.getElementById('resetBtn').addEventListener('click', resetAll);
+  nameToggle.addEventListener('click', () => {
+    showNames = !showNames;
+    nameToggle.setAttribute('aria-checked', String(showNames));
+  });
+  autoConfirmToggle.addEventListener('click', () => {
+    autoConfirm = !autoConfirm;
+    autoConfirmToggle.setAttribute('aria-checked', String(autoConfirm));
+    updateStatus();   // 立即按新状态重算：开启且匹配唯一时自动锁定
+  });
 }
 
 function updateHover(e) {
@@ -999,6 +1150,7 @@ function resetAll() {
   currentData.allPoints.forEach(p => { pointStates[p.id] = engine.isAlwaysSpawn(p.id) ? 'hasCipher' : 'unknown'; });
   brushHint.textContent = '点击点位 = 状态轮换（右键 / 长按 = 回退）· 悬停查看联动关系';
   brushHint.classList.remove('on');
+  brushHint.classList.remove('warn');
   updateLegend();
   updateStatus();
 }
@@ -1025,6 +1177,7 @@ function initTour() {
 async function init() {
   buildMenu();
   buildLegend();
+  buildLinkageLegend();
   bindEvents();
   bindSidebarToggle();
   initTheme();

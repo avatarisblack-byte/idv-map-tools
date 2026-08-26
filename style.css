@@ -246,7 +246,65 @@ body {
 .icon-btn:hover { background: var(--state-hover); color: var(--md-sys-color-on-surface); }
 .icon-btn:active { background: var(--state-pressed); }
 .icon-btn svg { width: 20px; height: 20px; display: block; }
-#themeToggle { align-self: flex-end; }
+/* ---- 顶部工具行（快速确认 + 名称标注 + 主题切换） ---- */
+.panel-tools {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  flex-wrap: wrap;      /* 空间不足时控件整体换行（避免标签被压缩换行） */
+  gap: 6px;
+}
+
+/* ---- 开关（MD3 Switch + 标签） ---- */
+.name-toggle {
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  white-space: nowrap;   /* 避免标签文字换行 */
+  gap: 8px;
+  height: 40px;
+  padding: 0 10px 0 12px;
+  color: var(--md-sys-color-on-surface-variant);
+  background: transparent;
+  border: none;
+  border-radius: var(--md-sys-shape-corner-full);
+  transition: background .15s ease, color .15s ease;
+}
+.name-toggle:hover { background: var(--state-hover); color: var(--md-sys-color-on-surface); }
+.name-toggle:active { background: var(--state-pressed); }
+.name-toggle-label { font-size: 13px; font-weight: 500; letter-spacing: .02em; white-space: nowrap; flex: 0 0 auto; }
+
+/* MD3 Switch：轨道 + 手柄 */
+.md3-switch {
+  position: relative;
+  flex: 0 0 auto;
+  width: 52px;
+  height: 32px;
+  border-radius: 16px;
+  box-sizing: border-box;
+  background: var(--md-sys-color-surface-container-highest);
+  border: 2px solid var(--md-sys-color-outline);
+  transition: background .2s var(--ease-out), border-color .2s var(--ease-out);
+}
+.md3-switch-thumb {
+  position: absolute;
+  top: 50%;
+  left: 6px;
+  width: 16px;
+  height: 16px;
+  margin-top: -8px;
+  border-radius: 50%;
+  background: var(--md-sys-color-outline);
+  transition: left .2s var(--ease-out), background .2s var(--ease-out);
+}
+.name-toggle[aria-checked="true"] .md3-switch {
+  background: var(--md-sys-color-primary);
+  border-color: var(--md-sys-color-primary);
+}
+.name-toggle[aria-checked="true"] .md3-switch-thumb {
+  left: 26px;
+  background: var(--md-sys-color-on-primary);
+}
 
 /* ---- 按钮：Outlined Button（重置） ---- */
 .reset-btn {
@@ -366,7 +424,7 @@ body {
 }
 .map-tooltip b { color: var(--md-sys-color-primary); }
 .map-tooltip .tt-star { color: #4aa8ff; }
-.map-tooltip .tt-com { color: #8bc2ee; }
+.map-tooltip .tt-com { color: #4fb3ff; }
 .map-tooltip .tt-exc { color: var(--md-sys-color-error); }
 .map-tooltip .tt-grp { color: var(--md-sys-color-on-surface-variant); }
 
@@ -393,9 +451,20 @@ body {
 }
 .brush-hint.on { color: var(--md-sys-color-primary); }
 
+/* 错误反馈：红色胶囊圈住提示词（最多点亮 5 台上限拦截） */
+.brush-hint.warn {
+  color: var(--md-sys-color-error);
+  border: 1px solid var(--md-sys-color-error);
+  border-radius: var(--md-sys-shape-corner-full);
+  background: color-mix(in srgb, var(--md-sys-color-error) 8%, transparent);
+  width: fit-content;
+  margin: 0 auto;
+  padding: 4px 16px;
+}
+
 /* ============ 右侧控制面板（图例 + 方案） ============ */
 .right-panel {
-  flex: 0 0 340px;
+  flex: 0 0 360px;
   min-width: 0;
   height: 100vh;
   display: flex;
@@ -461,9 +530,11 @@ body {
 .preset-chip {
   padding: 10px 12px;
   border-radius: var(--md-sys-shape-corner-sm);
+  cursor: pointer;
   transition: background .15s ease, opacity .18s ease;
 }
 .preset-chip:hover { background: var(--state-hover); }
+.preset-chip:active { background: var(--state-pressed); }
 .preset-head { display: flex; align-items: baseline; gap: 8px; }
 .preset-name { font-size: 13px; font-weight: 600; color: var(--md-sys-color-on-surface); }
 .preset-status { margin-top: 2px; font-size: 11px; letter-spacing: 0.03em; display: flex; align-items: center; gap: 4px; }
@@ -485,6 +556,39 @@ body {
   flex-wrap: wrap;
   gap: 8px;
   margin-top: 10px;
+}
+
+/* ---- 联动关系图例（只读指标：伴生 / 互斥 / 必刷，不可交互，去发光） ---- */
+.linkage-legend {
+  margin-top: 14px;
+  padding-top: 14px;
+  border-top: 1px solid var(--md-sys-color-outline-variant);
+}
+.linkage-title {
+  margin-bottom: 10px;
+  font-size: 11px;
+  letter-spacing: 0.04em;
+  color: var(--md-sys-color-on-surface-variant);
+}
+.linkage-items {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px 18px;
+}
+.linkage-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12.5px;
+  color: var(--md-sys-color-on-surface-variant);
+  cursor: default;
+  user-select: none;
+}
+.linkage-canvas {
+  width: 36px; height: 36px; flex: 0 0 36px;
+  background: #15130e;                              /* 暗色底座：与地图画布一致 */
+  border: 1px solid var(--md-sys-color-outline);
+  border-radius: 50%;
 }
 
 /* ============ 输入框（MD3 Text Field，基础样式；当前页面暂无输入框，备用） ============ */
@@ -549,22 +653,32 @@ body {
     flex: 0 0 auto;
   }
   .status-panel { margin: -12px -10px 0; padding: 10px 12px; }
-  .app-footer { display: none; }
   .right-panel {
     flex: 0 0 auto;
     width: 100%;
     height: auto;
-    padding: 12px 10px 24px;
+    padding: 12px 10px 84px;
     border-left: none;
     border-top: 1px solid var(--md-sys-color-outline-variant);
     overflow: visible;
   }
+  .app-footer {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    z-index: 40;
+    padding: 10px 12px;
+    background: var(--md-sys-color-surface-container);
+    border-top: 1px solid var(--md-sys-color-outline-variant);
+  }
+  .app-footer .footer-actions { margin-top: 0; }
 }
 
 /* ============ 无障碍：减少动态效果 ============ */
 @media (prefers-reduced-motion: reduce) {
   .sidebar, .drawer-backdrop { transition: none; }
-  .map-item, .icon-btn, .reset-btn, .legend-item, .preset-chip, .sidebar-toggle, .confirm-layout-btn {
+  .map-item, .icon-btn, .reset-btn, .legend-item, .preset-chip, .sidebar-toggle, .confirm-layout-btn, .name-toggle, .md3-switch, .md3-switch-thumb {
     transition-duration: 0.01ms;
   }
   .map-item:active, .icon-btn:active, .reset-btn:active, .legend-item:active, .confirm-layout-btn:active {

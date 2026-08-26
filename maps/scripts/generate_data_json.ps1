@@ -1,12 +1,12 @@
-﻿# 生成 data/*.json：从汇总 JSON + 源码 txt + 底图 PNG 抽取每张地图的完整结构化数据
+# 生成 data/*.json：从汇总 JSON + 源码 txt + 底图 PNG 抽取每张地图的完整结构化数据
 $ErrorActionPreference = 'Stop'
 Add-Type -AssemblyName System.Drawing
 
-$root = 'D:\@VibeCoding\idv-code-machine-tools'
-$summaryPath = Join-Path $root 'codemachine_Distribution\output\_所有地图密码机汇总.json'
+$root = [System.IO.Path]::GetFullPath((Join-Path $PSScriptRoot '..\..'))
+$summaryPath = Join-Path $root 'maps\ciphers\_所有地图密码机汇总.json'
 $summary = Get-Content $summaryPath -Raw -Encoding UTF8 | ConvertFrom-Json
 
-$dataDir = Join-Path $root 'data'
+$dataDir = Join-Path $root 'maps\data'
 New-Item -ItemType Directory -Force -Path $dataDir | Out-Null
 
 $maps = @($summary.PSObject.Properties.Name)
@@ -41,7 +41,7 @@ foreach ($map in $maps) {
     }
 
     # --- 底图远程 URL（「无名称点」分组） ---
-    $txtPath = Join-Path $root ('codemachine_Distribution\maps_input\' + $map + '.txt')
+    $txtPath = Join-Path $root ('maps\raw\' + $map + '.txt')
     $bgRemote = ''
     if (Test-Path $txtPath) {
         $raw = Get-Content $txtPath -Raw -Encoding UTF8
@@ -50,7 +50,7 @@ foreach ($map in $maps) {
     }
 
     # --- 底图尺寸 ---
-    $pngPath = Join-Path $root ('map_pic\' + $map + '_基本信息_无名称点.png')
+    $pngPath = Join-Path $root ('maps\images\' + $map + '_基本信息_无名称点.png')
     $w = 0; $h = 0
     if (Test-Path $pngPath) {
         $img = [System.Drawing.Image]::FromFile($pngPath)
@@ -60,7 +60,7 @@ foreach ($map in $maps) {
 
     $obj = [ordered]@{
         mapName       = $map
-        bgImage       = ('assets/maps/' + $map + '_基本信息_无名称点.png')
+        bgImage       = ('maps/images/' + $map + '_基本信息_无名称点.png')
         bgImageRemote = $bgRemote
         aspectW       = $w
         aspectH       = $h

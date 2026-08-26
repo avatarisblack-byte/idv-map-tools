@@ -32,7 +32,10 @@ def extract_cipher_from_text(raw_code: str):
     return map_title, groups_data
 
 
-def batch_process(input_dir="maps_input", output_dir="output"):
+def batch_process(input_dir=None, output_dir=None):
+    here = os.path.dirname(os.path.abspath(__file__))
+    input_dir = input_dir or os.path.join(here, '..', 'raw')
+    output_dir = output_dir or os.path.join(here, '..', 'ciphers')
     os.makedirs(output_dir, exist_ok=True)
 
     if not os.path.exists(input_dir):
