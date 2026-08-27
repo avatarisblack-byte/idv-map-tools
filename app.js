@@ -153,6 +153,7 @@ const sidebar = document.getElementById('sidebar');
 const sidebarToggle = document.getElementById('sidebarToggle');
 const drawerBackdrop = document.getElementById('drawerBackdrop');
 const confirmLayoutBtn = document.getElementById('confirmLayoutBtn');
+const resetBtn = document.getElementById('resetBtn');
 const themeToggle = document.getElementById('themeToggle');
 const nameToggle = document.getElementById('nameToggle');
 const autoConfirmToggle = document.getElementById('autoConfirmToggle');
@@ -596,7 +597,7 @@ function updateConfirmLayoutBtn() {
     confirmLayoutBtn.disabled = true;
     confirmLayoutBtn.classList.remove('is-ready');
     confirmLayoutBtn.classList.add('is-locked');
-    confirmLayoutBtn.textContent = '布局已锁定';
+    confirmLayoutBtn.textContent = '已锁定';
   } else {
     const unique = !!(linkage && linkage.matched.length === 1);
     confirmLayoutBtn.classList.remove('is-locked');
@@ -607,7 +608,10 @@ function updateConfirmLayoutBtn() {
 }
 
 function lockLayout(group) {
-  if (layoutLocked) return;
+  if (layoutLocked) {
+    // 已锁定：切换到新方案前先复位所有点位（必刷点默认、其余未知），避免残留上一方案的临时标记
+    currentData.allPoints.forEach(p => { pointStates[p.id] = engine.isAlwaysSpawn(p.id) ? 'hasCipher' : 'unknown'; });
+  }
   clearTimeout(autoConfirmTimer);
   layoutLocked = true;
   lockedGroup = group;
@@ -622,7 +626,7 @@ function lockLayout(group) {
     }
   }
   activeBrush = null;
-  brushHint.textContent = '布局已锁定：点击密码机 / 图例可切换 未破译 · 小遗产 · 大遗产 · 已点亮；点击右上角【重置】解除锁定';
+  brushHint.textContent = '布局已锁定：点击密码机 / 图例可切换 未破译 · 小遗产 · 大遗产 · 已点亮；点击其他刷点方案可切换布局，点击右上角【重置】解除锁定';
   brushHint.classList.remove('warn');
   brushHint.classList.add('on');
   updateLegend();
@@ -672,6 +676,8 @@ function updateStatus() {
   countEl.textContent = matched.length;
   countEl.classList.toggle('locked', matched.length === 1);
   countEl.classList.toggle('conflict', matched.length === 0);
+  // 剩余 0 组（无匹配方案）时，重置按钮脉冲提示用户复位
+  resetBtn.classList.toggle('attention', matched.length === 0);
 
   updatePresetList();
   updateConfirmLayoutBtn();
@@ -944,8 +950,10 @@ async function loadMap(name) {
     brushHint.classList.remove('warn');
     imgW = data.aspectW;
     imgH = data.aspectH;
+    // 竖屏下地图容器高度跟随地图宽高比，避免固定高度造成的纵向留白
+    mapWrap.style.setProperty('--map-aspect', imgW + ' / ' + imgH);
 
-    mapTitleText.textContent = data.mapName + ' · ' + data.allPoints.length + ' 点位 / ' + data.presets.length + ' 组';
+    mapTitleText.textContent = data.mapName;
     document.title = data.mapName + ' · 密码机刷点推导工具';
 
     buildPresetList();
@@ -1110,7 +1118,7 @@ function bindEvents() {
   document.getElementById('zoomOutBtn').addEventListener('click', () => zoomAt(cw / 2, ch / 2, 1 / 1.25));
   document.getElementById('zoomFitBtn').addEventListener('click', () => { fitView(); });
   confirmLayoutBtn.addEventListener('click', confirmLayout);
-  document.getElementById('resetBtn').addEventListener('click', resetAll);
+  resetBtn.addEventListener('click', resetAll);
   nameToggle.addEventListener('click', () => {
     showNames = !showNames;
     nameToggle.setAttribute('aria-checked', String(showNames));

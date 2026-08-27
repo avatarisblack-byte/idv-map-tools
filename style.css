@@ -322,6 +322,16 @@ body {
   border-color: var(--md-sys-color-primary);
 }
 .reset-btn:active { background: color-mix(in srgb, var(--md-sys-color-primary) 12%, transparent); }
+.reset-btn.attention {
+  color: var(--md-sys-color-on-error);
+  background: var(--md-sys-color-error);
+  border-color: var(--md-sys-color-error);
+  animation: reset-pulse 1.2s var(--ease-out) infinite;
+}
+@keyframes reset-pulse {
+  0%, 100% { box-shadow: 0 0 0 0 color-mix(in srgb, var(--md-sys-color-error) 45%, transparent); }
+  50%      { box-shadow: 0 0 0 10px color-mix(in srgb, var(--md-sys-color-error) 0%, transparent); }
+}
 
 /* ---- 按钮：Filled Button（确认布局） ---- */
 .confirm-layout-btn {
@@ -654,9 +664,16 @@ body {
     padding: 12px 10px 20px;
   }
   .map-wrap {
-    height: 56vh;
+    height: auto;
     flex: 0 0 auto;
+    aspect-ratio: var(--map-aspect, 1.165);
   }
+  .brush-hint {
+    white-space: normal;
+    overflow: visible;
+  }
+  #legendPanel { order: 2; }
+  #presetPanel { order: 1; }
   .status-panel { margin: -12px -10px 0; padding: 10px 12px; }
   .right-panel {
     flex: 0 0 auto;
@@ -691,6 +708,7 @@ body {
   }
   .sidebar-toggle:active { transform: translateY(-50%); }
   .confirm-layout-btn.is-ready, .map-loading { animation: none; }
+  .reset-btn.attention { animation: none; }
   .tour-spotlight, .tour-popover { transition: none; animation: none; }
   .tour-popover.tour-switching .tour-title,
   .tour-popover.tour-switching .tour-body,

@@ -69,19 +69,19 @@
 ├── .main
 │   ├── .status-panel         # Top App Bar：扁平全宽 surface-container（无边框/圆角/阴影），负边距贴边
 │   │   ├── .status-left      # 「剩余匹配刷点方案 N 组」（N 锁定=tertiary / 冲突=error）
-│   │   └── .status-right     # 确认布局(Filled) + 缩放(Icon ×3, aria-label) + 重置(Outlined)
-│   ├── .workspace            # .map-frame（无框）> .map-wrap（深色底 #0a0907，12px 圆角）> #mapCanvas + .map-title（左上角，定位图标=assets/icons/定位.svg 内联）
-│   ├── .brush-hint           # 操作提示（默认=左键/右键/悬停/滚轮/拖拽；.on 金色高亮 / .warn 红色胶囊=点亮 5 台上限拦截）
+│   │   └── .status-right     # 确认布局(Filled，锁定后文案「已锁定」) + 缩放(Icon ×3, aria-label) + 重置(Outlined，剩余 0 组时 .attention 红色脉冲)
+│   ├── .workspace            # .map-frame（无框）> .map-wrap（深色底 #0a0907，12px 圆角；竖屏 aspect-ratio 跟随地图宽高比）> #mapCanvas + .map-title（左上角，仅地图名，定位图标=assets/icons/定位.svg 内联）
+│   ├── .brush-hint           # 操作提示（默认=左键/右键/悬停/滚轮/拖拽；.on 金色高亮 / .warn 红色胶囊=点亮 5 台上限拦截；竖屏 white-space:normal 换行）
 │   └── .app-footer           # .footer-actions（三按钮：新手引导 / Bilibili Wiki / GitHub，均带图标居左）+ .footer-credit（开源于 GitHub，12px 浅灰居中）
 └── .right-panel#rightPanel   # 右侧控制栏（surface-container-low，无左边框）
     ├── .panel-tools          # 顶部工具行（靠右）：快速确认 + 名称标注开关 + 主题切换
     │   ├── #autoConfirmToggle # 快速确认开关（MD3 Switch + 标签，aria-checked），开启后匹配唯一时延迟 500ms 自动 lockLayout（防抖，兼容双击/三击）
     │   ├── #nameToggle       # 名称标注开关（MD3 Switch：52×32 轨道 + 16px 手柄 + 标签，aria-checked），控制地图名称标注层显隐
     │   └── #themeToggle      # 深色模式切换（Icon Button，月亮/太阳 SVG）
-    ├── .panel#legendPanel    # 卡片（filled: surface-container-highest，无描边/阴影）
+    ├── .panel#legendPanel    # 卡片（filled: surface-container-highest，无描边/阴影；竖屏 order:2 置于刷点方案之后）
     │   ├── .legend           # 状态图例 = Filter Chip（.legend-item 56px、圆形暗色底座、对称 2 列网格，aria-pressed）
     │   └── .linkage-legend   # 联动关系图例（只读：伴生/互斥/必刷，暗色圆底座 36px、去发光、无边框不可交互，分隔于状态图例下方）
-    └── .panel#presetPanel    # 卡片：刷点方案（.preset-chip 2 列网格；悬停 state-layer；点击直接确认布局 lockLayout；筛选/锁定后显示 SVG 对勾/叉；is-filtered 降透明 / is-locked tertiary 文字）
+    └── .panel#presetPanel    # 卡片：刷点方案（.preset-chip 2 列网格；悬停 state-layer；点击直接确认布局 lockLayout，锁定后点击可切换锁定方案；筛选/锁定后显示 SVG 对勾/叉；is-filtered 降透明 / is-locked tertiary 文字；竖屏 order:1 置于图例之前）
 ```
 
 ---
@@ -177,7 +177,7 @@ requestAnimationFrame(loop) → draw(now)：
 ```
 pointerdown → 拖拽平移/点击判定；pointerup → hitTest → applyPoint(id) → cycle/setState
 contextmenu（右键/长按）→ cycle(id, -1)；wheel → zoomAt；pointermove → updateHover → buildTooltip
-图例点击 → setBrush（画笔模式）；重置 → resetAll
+图例点击 → setBrush（画笔模式）；重置 → resetAll；刷点方案点击 → lockLayout（锁定后再次点击可切换锁定方案）
 setState → updateLegend() → updateStatus() → recompute() → filterGroups → 更新剩余组数 / linkageBar / 方案列表 / 确认按钮态 → 下一帧 draw()
 ```
 
