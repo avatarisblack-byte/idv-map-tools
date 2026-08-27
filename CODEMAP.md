@@ -12,11 +12,14 @@
 ├── style.css             # 全部样式（MD3 主题：语义 Token + 组件样式 + 响应式 + 减动效 + 新手指引）
 ├── app.js                # ★ 核心逻辑（ES Module）：fetch 加载、Canvas 渲染、缩放平移、点位勾选、联动渲染、DOM 更新
 ├── rule-engine.js        # ★ 刷点联动规则引擎（ES Module）：必刷/互斥/伴生/组合过滤，纯数据驱动
-├── tour.js               # 新手指引（Onboarding Tour，6 步）：聚光灯遮罩（无目标步骤高亮气泡本体）+ 自动定位引导卡片 + step.link 链接 + localStorage 记忆
+├── tour.js               # 新手指引（Onboarding Tour，7 步）：聚光灯遮罩（无目标步骤高亮气泡本体）+ 自动定位引导卡片 + 竖屏自动平滑滚动到目标 + step.link 链接 + localStorage 记忆
 ├── package.json          # npm 清单（devDependency: @material/material-color-utilities；脚本 npm run tokens）
 ├── README.md             # 项目说明（功能 / 快速开始 / 操作 / 目录结构 / 数据来源）
+├── websiteicon.png       # 站点图标（favicon + 侧栏品牌图标：深色圆角衬底 + 提亮金色，生成自 scripts/generate_icon.js）
 ├── scripts/
-│   └── generate-m3-tokens.mjs  # MD3 Token 生成器（构建期运行，产出 src/styles/md3-tokens.css）
+│   ├── generate-m3-tokens.mjs  # MD3 Token 生成器（构建期运行，产出 src/styles/md3-tokens.css）
+│   ├── analyze_icon.js         # favicon PNG 分析工具（颜色/透明度/主色）
+│   └── generate_icon.js        # favicon 生成器（深色圆角衬底 + 提亮金色）
 ├── src/styles/
 │   └── md3-tokens.css    # ★ 全局 MD3 设计 Token（自动生成：Dynamic Color 亮/暗 + Surface Container + Shape + Elevation + Typeface）
 ├── .claude/skills/
@@ -69,10 +72,10 @@
 │   │   └── .status-right     # 确认布局(Filled) + 缩放(Icon ×3, aria-label) + 重置(Outlined)
 │   ├── .workspace            # .map-frame（无框）> .map-wrap（深色底 #0a0907，12px 圆角）> #mapCanvas + .map-title（左上角，定位图标=assets/icons/定位.svg 内联）
 │   ├── .brush-hint           # 操作提示（默认=左键/右键/悬停/滚轮/拖拽；.on 金色高亮 / .warn 红色胶囊=点亮 5 台上限拦截）
-│   └── .app-footer           # .footer-actions（三按钮：新手引导 / Bilibili Wiki / GitHub，均带图标居左）
+│   └── .app-footer           # .footer-actions（三按钮：新手引导 / Bilibili Wiki / GitHub，均带图标居左）+ .footer-credit（开源于 GitHub，12px 浅灰居中）
 └── .right-panel#rightPanel   # 右侧控制栏（surface-container-low，无左边框）
     ├── .panel-tools          # 顶部工具行（靠右）：快速确认 + 名称标注开关 + 主题切换
-    │   ├── #autoConfirmToggle # 快速确认开关（MD3 Switch + 标签，aria-checked），开启后匹配唯一时自动 lockLayout
+    │   ├── #autoConfirmToggle # 快速确认开关（MD3 Switch + 标签，aria-checked），开启后匹配唯一时延迟 500ms 自动 lockLayout（防抖，兼容双击/三击）
     │   ├── #nameToggle       # 名称标注开关（MD3 Switch：52×32 轨道 + 16px 手柄 + 标签，aria-checked），控制地图名称标注层显隐
     │   └── #themeToggle      # 深色模式切换（Icon Button，月亮/太阳 SVG）
     ├── .panel#legendPanel    # 卡片（filled: surface-container-highest，无描边/阴影）
@@ -193,5 +196,5 @@ setState → updateLegend() → updateStatus() → recompute() → filterGroups 
   - 阴影仅保留 drawer / tooltip / popover 等悬浮层；
   - 状态层用 `color-mix`（on-surface 8%/12%）。
 - **无障碍**：全局 `:focus-visible` 主色焦点环；图标按钮带 `aria-label`；图例 `aria-pressed`；地图菜单 `aria-current=page`；`prefers-reduced-motion` 关闭动效。
-- **新手指引**：7 步（Step 4 = 右上角快捷开关：快速确认 / 名称标注 / 深色模式；Step 6 = 刷点方案，点击可快速确认布局；Step 7 = 数据来源与开源仓库，居中气泡并高亮气泡本体，含 GitHub 链接按钮），完成/跳过写 `localStorage.hasCompletedTour=true`。
+- **新手指引**：7 步（Step 4 = 右上角快捷开关：快速确认 / 名称标注 / 深色模式；Step 6 = 刷点方案，点击可快速确认布局；Step 7 = 数据来源与开源仓库，居中气泡并高亮气泡本体，含 GitHub 链接按钮），竖屏下自动平滑滚动到目标板块、结束恢复原滚动位置，完成/跳过写 `localStorage.hasCompletedTour=true`。
 - **动效令牌**：`--ease-out / --ease-in-out / --ease-drawer`；仅动画 `transform/opacity/color/border/background/box-shadow`。

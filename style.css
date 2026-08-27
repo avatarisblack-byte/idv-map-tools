@@ -91,9 +91,9 @@ body {
 }
 .brand-icon {
   flex: 0 0 auto;
-  width: 22px;
-  height: 22px;
-  color: var(--md-sys-color-primary);
+  width: 32px;
+  height: 32px;
+  object-fit: contain;
 }
 .menu-title {
   font-size: 11px; letter-spacing: 0.12em;
@@ -556,6 +556,11 @@ body {
   flex-wrap: wrap;
   gap: 8px;
   margin-top: 10px;
+}
+.footer-credit {
+  margin-top: 10px;
+  font-size: 12px;
+  color: var(--md-sys-color-on-surface-variant);
 }
 
 /* ---- 联动关系图例（只读指标：伴生 / 互斥 / 必刷，不可交互，去发光） ---- */

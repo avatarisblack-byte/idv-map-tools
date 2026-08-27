@@ -127,6 +127,7 @@ let mapImage = null;         // 底图 Image
 let nameMarks = [];          // 地图名称标注（仅 text / door 类型）
 let showNames = false;       // 名称标注开关
 let autoConfirm = false;     // 快速确认开关（匹配唯一时自动锁定布局）
+let autoConfirmTimer = null; // 快速确认自动锁定的延迟定时器（给双击/三击留出连续操作窗口）
 let previewIds = new Set();  // 方案列表悬停预览点位
 let hoveredId = null;        // 当前悬停的点位
 let layoutLocked = false;    // 是否已锁定全局布局（点击「确认布局」后）
@@ -607,6 +608,7 @@ function updateConfirmLayoutBtn() {
 
 function lockLayout(group) {
   if (layoutLocked) return;
+  clearTimeout(autoConfirmTimer);
   layoutLocked = true;
   lockedGroup = group;
   // 方案外点位：清空标记（点击方案快速确认时，仅保留该方案 7 台真实密码机）
@@ -634,6 +636,17 @@ function confirmLayout() {
   lockLayout(linkage.matched[0]);
 }
 
+/* 快速确认自动锁定：延迟 500ms 执行，避免打断用户双击/三击的连续操作 */
+function scheduleAutoConfirm() {
+  clearTimeout(autoConfirmTimer);
+  autoConfirmTimer = setTimeout(() => {
+    autoConfirmTimer = null;
+    if (autoConfirm && !layoutLocked && linkage && linkage.matched.length === 1) {
+      lockLayout(linkage.matched[0]);
+    }
+  }, 500);
+}
+
 /* ===================== DOM 更新 ===================== */
 function updateStatus() {
   if (!currentData || !engine) return;
@@ -651,10 +664,9 @@ function updateStatus() {
     return;
   }
 
-  // 快速确认：开启且匹配唯一时自动锁定布局
+  // 快速确认：开启且匹配唯一时，延迟自动锁定（给双击/三击留出连续操作窗口）
   if (autoConfirm && matched.length === 1) {
-    lockLayout(matched[0]);
-    return;
+    scheduleAutoConfirm();
   }
 
   countEl.textContent = matched.length;
@@ -926,6 +938,7 @@ async function loadMap(name) {
     layoutLocked = false;
     lockedGroup = null;
     activeBrush = null;
+    clearTimeout(autoConfirmTimer);
     brushHint.textContent = '左键 = 状态前进 · 右键 / 长按 = 状态回退 · 悬停查看联动关系 · 滚轮缩放 · 拖拽平移';
     brushHint.classList.remove('on');
     brushHint.classList.remove('warn');
@@ -1147,6 +1160,7 @@ function resetAll() {
   layoutLocked = false;
   lockedGroup = null;
   activeBrush = null;
+  clearTimeout(autoConfirmTimer);
   currentData.allPoints.forEach(p => { pointStates[p.id] = engine.isAlwaysSpawn(p.id) ? 'hasCipher' : 'unknown'; });
   brushHint.textContent = '点击点位 = 状态轮换（右键 / 长按 = 回退）· 悬停查看联动关系';
   brushHint.classList.remove('on');

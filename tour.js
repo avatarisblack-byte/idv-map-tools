@@ -25,6 +25,9 @@ export function mountTour({ steps = [], storageKey = DEFAULT_STORAGE_KEY } = {})
 
   let current = 0;
   let active = false;
+  let savedScrollTop = 0;   // 进入指引前的滚动位置（结束时恢复）
+  let scrolling = false;      // 平滑滚动进行中（临时关闭 spotlight/popover 过渡，避免闪烁）
+  let scrollEndTimer = null;  // scrollend 兜底定时器
 
   /* ---------- 构建 DOM ---------- */
   const blocker = document.createElement('div');
@@ -117,6 +120,36 @@ export function mountTour({ steps = [], storageKey = DEFAULT_STORAGE_KEY } = {})
     rect.width = rect.right - rect.left;
     rect.height = rect.bottom - rect.top;
     return rect;
+  }
+
+  /* 平滑滚动到目标（竖屏长页面下，确保目标进入视口、聚光灯能框选） */
+  function finishScroll() {
+    if (!scrolling) return;
+    scrolling = false;
+    clearTimeout(scrollEndTimer);
+    spotlight.style.transition = '';
+    popover.style.transition = '';
+    reposition();
+  }
+
+  function scrollTargetIntoView(step) {
+    if (!step.target) return;
+    const rect = targetRect(step);
+    if (!rect) return;
+    // 目标已接近视口中心时无需滚动，直接定位，避免无意义的平滑滚动
+    const vh = window.innerHeight;
+    const dy = (rect.top + rect.height / 2) - vh / 2;
+    if (Math.abs(dy) < 4) return;
+    const sels = Array.isArray(step.target) ? step.target : [step.target];
+    const el = sels.map(s => document.querySelector(s)).find(Boolean);
+    if (!el) return;
+    // 平滑滚动期间关闭 spotlight/popover 过渡，让其紧贴目标，避免与滚动叠加造成闪烁
+    scrolling = true;
+    spotlight.style.transition = 'none';
+    popover.style.transition = 'none';
+    el.scrollIntoView({ block: 'center', behavior: 'smooth' });
+    clearTimeout(scrollEndTimer);
+    scrollEndTimer = setTimeout(finishScroll, 700);  // 兜底：浏览器不支持 scrollend 时
   }
 
   /* ---------- 定位：聚光灯 ---------- */
@@ -245,8 +278,11 @@ export function mountTour({ steps = [], storageKey = DEFAULT_STORAGE_KEY } = {})
     finishBtn.style.display = last ? '' : 'none';
     skipBtn.style.display = last ? 'none' : '';
 
-    // 待内容渲染完成后测量尺寸再定位
+    // 先平滑滚动到目标（竖屏长页面下确保框选得到），再待内容渲染完成后测量定位
+    scrollTargetIntoView(step);
     requestAnimationFrame(() => {
+      // 平滑滚动进行中：定位交给 scroll 事件的 reposition 实时跟随，避免定位到旧位置
+      if (scrolling) { popover.focus(); return; }
       const rect = targetRect(step);
       positionPopover(rect);
       positionSpotlight(rect);
@@ -256,6 +292,7 @@ export function mountTour({ steps = [], storageKey = DEFAULT_STORAGE_KEY } = {})
 
   /* ---------- 生命周期 ---------- */
   function start() {
+    savedScrollTop = (document.scrollingElement || document.documentElement).scrollTop;
     active = true;
     document.body.classList.add('tour-active');
     blocker.style.display = 'block';
@@ -283,6 +320,8 @@ export function mountTour({ steps = [], storageKey = DEFAULT_STORAGE_KEY } = {})
     blocker.style.display = 'none';
     spotlight.style.display = 'none';
     popover.style.display = 'none';
+    // 恢复进入指引前的滚动位置
+    (document.scrollingElement || document.documentElement).scrollTop = savedScrollTop;
   }
 
   function isCompleted() {
@@ -304,6 +343,7 @@ export function mountTour({ steps = [], storageKey = DEFAULT_STORAGE_KEY } = {})
 
   window.addEventListener('resize', reposition);
   document.addEventListener('scroll', reposition, true); // 捕获内部滚动（右侧面板等）
+  document.addEventListener('scrollend', finishScroll);  // 平滑滚动结束后恢复过渡并最终定位
 
   return { start, restart: start, isCompleted };
 }
