@@ -692,6 +692,10 @@ body {
   .sidebar-toggle:active { transform: translateY(-50%); }
   .confirm-layout-btn.is-ready, .map-loading { animation: none; }
   .tour-spotlight, .tour-popover { transition: none; animation: none; }
+  .tour-popover.tour-switching .tour-title,
+  .tour-popover.tour-switching .tour-body,
+  body.tour-closing .tour-popover,
+  body.tour-closing .tour-spotlight { animation: none; }
   .tour-btn, .tour-link { transition-duration: 0.01ms; }
 }
 
@@ -711,8 +715,8 @@ body {
     0 0 0 2px var(--md-sys-color-primary),
     0 0 0 100vmax color-mix(in srgb, var(--md-sys-color-scrim) 50%, transparent);
   pointer-events: none;
-  transition: left .28s var(--ease-out), top .28s var(--ease-out),
-              width .28s var(--ease-out), height .28s var(--ease-out);
+  transition: left .12s cubic-bezier(0.2, 0, 0, 1), top .12s cubic-bezier(0.2, 0, 0, 1),
+              width .12s cubic-bezier(0.2, 0, 0, 1), height .12s cubic-bezier(0.2, 0, 0, 1);
 }
 .tour-popover {
   position: fixed;
@@ -724,7 +728,7 @@ body {
   border: 1px solid var(--md-sys-color-outline-variant);
   border-radius: var(--md-sys-shape-corner-lg);
   box-shadow: var(--md-sys-elevation-level-3);
-  transition: left .28s var(--ease-out), top .28s var(--ease-out);
+  transition: left .18s var(--ease-out), top .18s var(--ease-out);
 }
 .tour-blocker, .tour-spotlight, .tour-popover { display: none; }
 body.tour-active { overflow: hidden; }
@@ -845,4 +849,26 @@ body.tour-active { overflow: hidden; }
 }
 body.tour-active .tour-popover { animation: tour-pop-in .24s var(--ease-out); }
 body.tour-active .tour-spotlight { animation: tour-spot-in .24s var(--ease-out); }
+
+/* 步骤切换：内容切入动画（每次「下一步/上一步」重播） */
+@keyframes tour-content-in {
+  from { opacity: 0; transform: translateY(8px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.tour-popover.tour-switching .tour-title,
+.tour-popover.tour-switching .tour-body {
+  animation: tour-content-in .18s var(--ease-out) .08s backwards;
+}
+
+/* 完成/跳过：淡出动画 */
+@keyframes tour-pop-out {
+  from { opacity: 1; transform: translateY(0) scale(1); }
+  to   { opacity: 0; transform: translateY(10px) scale(0.96); }
+}
+@keyframes tour-spot-out {
+  from { opacity: 1; }
+  to   { opacity: 0; }
+}
+body.tour-closing .tour-popover { animation: tour-pop-out .2s var(--ease-out) forwards; }
+body.tour-closing .tour-spotlight { animation: tour-spot-out .2s var(--ease-out) forwards; }
 .restart-tour-btn:hover { background: color-mix(in srgb, var(--md-sys-color-primary) 8%, transparent); }

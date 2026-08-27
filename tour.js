@@ -132,24 +132,33 @@ export function mountTour({ steps = [], storageKey = DEFAULT_STORAGE_KEY } = {})
     reposition();
   }
 
+  /* 滚动静止后收尾：每次滚动事件都重置计时器，真正停稳才恢复过渡 */
+  function scheduleFinish() {
+    clearTimeout(scrollEndTimer);
+    scrollEndTimer = setTimeout(finishScroll, 120);
+  }
+
   function scrollTargetIntoView(step) {
-    if (!step.target) return;
+    if (!step.target) return false;
     const rect = targetRect(step);
-    if (!rect) return;
-    // 目标已接近视口中心时无需滚动，直接定位，避免无意义的平滑滚动
+    if (!rect) return false;
     const vh = window.innerHeight;
-    const dy = (rect.top + rect.height / 2) - vh / 2;
-    if (Math.abs(dy) < 4) return;
+    const vw = window.innerWidth;
+    // 目标已基本在视口内则无需滚动。注意：横屏页面 overflow:hidden 根本滚不动，
+    // 若按「是否在视口中心」判断会误触发滚动，导致聚光灯定位被推迟到 120ms 后才执行。
+    const inView = rect.top >= -MARGIN && rect.left >= -MARGIN &&
+                   rect.bottom <= vh + MARGIN && rect.right <= vw + MARGIN;
+    if (inView) return false;
     const sels = Array.isArray(step.target) ? step.target : [step.target];
     const el = sels.map(s => document.querySelector(s)).find(Boolean);
-    if (!el) return;
+    if (!el) return false;
     // 平滑滚动期间关闭 spotlight/popover 过渡，让其紧贴目标，避免与滚动叠加造成闪烁
     scrolling = true;
     spotlight.style.transition = 'none';
     popover.style.transition = 'none';
     el.scrollIntoView({ block: 'center', behavior: 'smooth' });
-    clearTimeout(scrollEndTimer);
-    scrollEndTimer = setTimeout(finishScroll, 700);  // 兜底：浏览器不支持 scrollend 时
+    scheduleFinish();  // 滚动静止 120ms 后收尾（scrollend 仍为即时路径）
+    return true;
   }
 
   /* ---------- 定位：聚光灯 ---------- */
@@ -273,27 +282,41 @@ export function mountTour({ steps = [], storageKey = DEFAULT_STORAGE_KEY } = {})
     bodyEl.innerHTML = renderBody(step.text || '') + renderLinks(step.link);
     progressEl.textContent = (index + 1) + '/' + steps.length;
 
+    // 每次切换重播内容切入动画（移除类 → 强制重排 → 加回类）
+    popover.classList.remove('tour-switching');
+    void popover.offsetWidth;
+    popover.classList.add('tour-switching');
+
     prevBtn.disabled = index === 0;
     nextBtn.style.display = last ? 'none' : '';
     finishBtn.style.display = last ? '' : 'none';
     skipBtn.style.display = last ? 'none' : '';
 
-    // 先平滑滚动到目标（竖屏长页面下确保框选得到），再待内容渲染完成后测量定位
-    scrollTargetIntoView(step);
-    requestAnimationFrame(() => {
-      // 平滑滚动进行中：定位交给 scroll 事件的 reposition 实时跟随，避免定位到旧位置
-      if (scrolling) { popover.focus(); return; }
+    // 先平滑滚动到目标（竖屏长页面下确保框选得到）
+    const willScroll = scrollTargetIntoView(step);
+    if (willScroll) {
+      // 滚动中：定位交给 scroll 事件的 reposition 实时跟随，避免定位到旧位置
+      requestAnimationFrame(() => {
+        if (scrolling) { popover.focus(); return; }
+        const rect = targetRect(step);
+        positionPopover(rect);
+        positionSpotlight(rect);
+        popover.focus();
+      });
+    } else {
+      // 无需滚动：同步定位，文字、切入动画与聚光灯过渡在同一帧发生，消除「文字先变、框后到」
       const rect = targetRect(step);
       positionPopover(rect);
       positionSpotlight(rect);
       popover.focus();
-    });
+    }
   }
 
   /* ---------- 生命周期 ---------- */
   function start() {
     savedScrollTop = (document.scrollingElement || document.documentElement).scrollTop;
     active = true;
+    document.body.classList.remove('tour-closing');
     document.body.classList.add('tour-active');
     blocker.style.display = 'block';
     popover.style.display = 'block';
@@ -314,14 +337,24 @@ export function mountTour({ steps = [], storageKey = DEFAULT_STORAGE_KEY } = {})
   }
 
   function complete() {
-    try { localStorage.setItem(storageKey, 'true'); } catch (e) { /* ignore */ }
+    if (!active) return;
     active = false;
-    document.body.classList.remove('tour-active');
-    blocker.style.display = 'none';
-    spotlight.style.display = 'none';
-    popover.style.display = 'none';
-    // 恢复进入指引前的滚动位置
+    try { localStorage.setItem(storageKey, 'true'); } catch (e) { /* ignore */ }
+    scrolling = false;
+    clearTimeout(scrollEndTimer);
+    // 先恢复滚动位置（遮罩尚在，避免淡出后页面跳动）
     (document.scrollingElement || document.documentElement).scrollTop = savedScrollTop;
+    // 播放淡出动画，结束后再隐藏
+    document.body.classList.remove('tour-active');
+    document.body.classList.add('tour-closing');
+    popover.style.pointerEvents = 'none';
+    setTimeout(() => {
+      document.body.classList.remove('tour-closing');
+      blocker.style.display = 'none';
+      spotlight.style.display = 'none';
+      popover.style.display = 'none';
+      popover.style.pointerEvents = '';
+    }, 200);
   }
 
   function isCompleted() {
@@ -342,7 +375,10 @@ export function mountTour({ steps = [], storageKey = DEFAULT_STORAGE_KEY } = {})
   });
 
   window.addEventListener('resize', reposition);
-  document.addEventListener('scroll', reposition, true); // 捕获内部滚动（右侧面板等）
+  document.addEventListener('scroll', () => {
+    reposition();
+    if (scrolling) scheduleFinish();  // 滚动中持续重置静止计时，停稳后才恢复过渡
+  }, true); // 捕获内部滚动（右侧面板等）
   document.addEventListener('scrollend', finishScroll);  // 平滑滚动结束后恢复过渡并最终定位
 
   return { start, restart: start, isCompleted };

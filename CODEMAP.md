@@ -12,7 +12,7 @@
 ├── style.css             # 全部样式（MD3 主题：语义 Token + 组件样式 + 响应式 + 减动效 + 新手指引）
 ├── app.js                # ★ 核心逻辑（ES Module）：fetch 加载、Canvas 渲染、缩放平移、点位勾选、联动渲染、DOM 更新
 ├── rule-engine.js        # ★ 刷点联动规则引擎（ES Module）：必刷/互斥/伴生/组合过滤，纯数据驱动
-├── tour.js               # 新手指引（Onboarding Tour，7 步）：聚光灯遮罩（无目标步骤高亮气泡本体）+ 自动定位引导卡片 + 竖屏自动平滑滚动到目标 + step.link 链接 + localStorage 记忆
+├── tour.js               # 新手指引（Onboarding Tour，7 步）：聚光灯遮罩（无目标步骤高亮气泡本体）+ 自动定位引导卡片 + 目标滚出视口时平滑滚动到目标 + 步骤切换内容切入动画 + 完成/跳过淡出动画 + step.link 链接 + localStorage 记忆
 ├── package.json          # npm 清单（devDependency: @material/material-color-utilities；脚本 npm run tokens）
 ├── README.md             # 项目说明（功能 / 快速开始 / 操作 / 目录结构 / 数据来源）
 ├── websiteicon.png       # 站点图标（favicon + 侧栏品牌图标：深色圆角衬底 + 提亮金色，生成自 scripts/generate_icon.js）
@@ -196,5 +196,5 @@ setState → updateLegend() → updateStatus() → recompute() → filterGroups 
   - 阴影仅保留 drawer / tooltip / popover 等悬浮层；
   - 状态层用 `color-mix`（on-surface 8%/12%）。
 - **无障碍**：全局 `:focus-visible` 主色焦点环；图标按钮带 `aria-label`；图例 `aria-pressed`；地图菜单 `aria-current=page`；`prefers-reduced-motion` 关闭动效。
-- **新手指引**：7 步（Step 4 = 右上角快捷开关：快速确认 / 名称标注 / 深色模式；Step 6 = 刷点方案，点击可快速确认布局；Step 7 = 数据来源与开源仓库，居中气泡并高亮气泡本体，含 GitHub 链接按钮），竖屏下自动平滑滚动到目标板块、结束恢复原滚动位置，完成/跳过写 `localStorage.hasCompletedTour=true`。
+- **新手指引**：7 步（Step 4 = 右上角快捷开关：快速确认 / 名称标注 / 深色模式；Step 6 = 刷点方案，点击可快速确认布局；Step 7 = 数据来源与开源仓库，居中气泡并高亮气泡本体，含 GitHub 链接按钮），目标滚出视口才自动平滑滚动到目标板块（横屏 `overflow:hidden` 一屏显示、不滚动）、结束恢复原滚动位置，完成/跳过写 `localStorage.hasCompletedTour=true`。步骤切换重播标题/正文「切入动画」（`.tour-switching`，延迟 0.08s 让聚光灯先动、文字后浮现），完成/跳过先播「淡出动画」（`body.tour-closing`）再隐藏；滚动收尾用「静止去抖（120ms）」替代固定 700ms 兜底，避免长滚动中提前恢复过渡造成拖尾。
 - **动效令牌**：`--ease-out / --ease-in-out / --ease-drawer`；仅动画 `transform/opacity/color/border/background/box-shadow`。
