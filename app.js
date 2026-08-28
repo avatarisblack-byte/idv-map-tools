@@ -10,9 +10,9 @@ import { mountTour } from './tour.js';
 'use strict';
 
 /* ===================== 常量：状态定义 ===================== */
-const STATE_ORDER = ['unknown', 'noCipher', 'hasCipher', 'small', 'big', 'finish'];
+const STATE_ORDER = ['unknown', 'hasCipher', 'noCipher', 'small', 'big', 'finish'];
 /* 简易模式（默认）：仅保留推导必需的三种状态 */
-const SIMPLE_ORDER = ['unknown', 'noCipher', 'hasCipher'];
+const SIMPLE_ORDER = ['unknown', 'hasCipher', 'noCipher'];
 const STATE_META = {
   unknown:   { label: '未知',              short: '未知' },
   noCipher:  { label: '无电机',           short: '无' },
