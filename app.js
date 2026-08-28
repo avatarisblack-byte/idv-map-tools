@@ -136,8 +136,8 @@ let lockedGroup = null;      // 锁定时的唯一刷点组
 const view = { scale: 1, tx: 0, ty: 0 };
 const MIN_SCALE = 0.15;
 const MAX_SCALE = 10;
-const MARKER_R = 16;
-const ICON_PX = 24;
+let MARKER_R = 16;
+let ICON_PX = 24;
 
 let imgW = 0, imgH = 0;
 
@@ -147,6 +147,7 @@ const ctx = canvas.getContext('2d');
 const mapWrap = document.getElementById('mapWrap');
 const mapTooltip = document.getElementById('mapTooltip');
 const mapLoading = document.getElementById('mapLoading');
+const mapTitle = document.getElementById('mapTitle');
 const mapTitleText = document.getElementById('mapTitleText');
 const brushHint = document.getElementById('brushHint');
 const sidebar = document.getElementById('sidebar');
@@ -157,6 +158,8 @@ const resetBtn = document.getElementById('resetBtn');
 const themeToggle = document.getElementById('themeToggle');
 const nameToggle = document.getElementById('nameToggle');
 const autoConfirmToggle = document.getElementById('autoConfirmToggle');
+const iconSizeSlider = document.getElementById('iconSizeSlider');
+const iconSizeValue = document.getElementById('iconSizeValue');
 
 let cw = 0, ch = 0;
 const dpr = Math.max(1, window.devicePixelRatio || 1);
@@ -1019,6 +1022,11 @@ function bindSidebarToggle() {
     setSidebarCollapsed(!sidebar.classList.contains('is-collapsed'));
   });
 
+  // 点击地图名称板块：调出左侧边栏（地图菜单）
+  mapTitle.addEventListener('click', () => {
+    setSidebarCollapsed(false);
+  });
+
   // 点击遮罩层（或地图区域）自动收起抽屉
   drawerBackdrop.addEventListener('click', () => {
     setSidebarCollapsed(true);
@@ -1127,6 +1135,13 @@ function bindEvents() {
     autoConfirm = !autoConfirm;
     autoConfirmToggle.setAttribute('aria-checked', String(autoConfirm));
     updateStatus();   // 立即按新状态重算：开启且匹配唯一时自动锁定
+  });
+  iconSizeSlider.addEventListener('input', () => {
+    const scale = Number(iconSizeSlider.value) / 100;
+    ICON_PX = 24 * scale;
+    MARKER_R = 16 * scale;
+    iconSizeValue.textContent = iconSizeSlider.value + '%';
+    // 主循环 draw 每帧重绘，变量更新后自动生效
   });
 }
 
