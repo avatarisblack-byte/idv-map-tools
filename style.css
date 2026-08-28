@@ -252,7 +252,7 @@ body {
   align-items: center;
   justify-content: flex-end;
   flex-wrap: wrap;      /* 空间不足时控件整体换行（避免标签被压缩换行） */
-  gap: 6px;
+  gap: 3px;
 }
 
 /* ---- 开关（MD3 Switch + 标签） ---- */
@@ -261,9 +261,9 @@ body {
   display: inline-flex;
   align-items: center;
   white-space: nowrap;   /* 避免标签文字换行 */
-  gap: 8px;
+  gap: 6px;
   height: 40px;
-  padding: 0 10px 0 12px;
+  padding: 0 6px 0 8px;
   color: var(--md-sys-color-on-surface-variant);
   background: transparent;
   border: none;
@@ -272,15 +272,15 @@ body {
 }
 .name-toggle:hover { background: var(--state-hover); color: var(--md-sys-color-on-surface); }
 .name-toggle:active { background: var(--state-pressed); }
-.name-toggle-label { font-size: 13px; font-weight: 500; letter-spacing: .02em; white-space: nowrap; flex: 0 0 auto; }
+.name-toggle-label { font-size: 12px; font-weight: 500; letter-spacing: .02em; white-space: nowrap; flex: 0 0 auto; }
 
 /* MD3 Switch：轨道 + 手柄 */
 .md3-switch {
   position: relative;
   flex: 0 0 auto;
-  width: 52px;
-  height: 32px;
-  border-radius: 16px;
+  width: 48px;
+  height: 30px;
+  border-radius: 15px;
   box-sizing: border-box;
   background: var(--md-sys-color-surface-container-highest);
   border: 2px solid var(--md-sys-color-outline);
@@ -289,10 +289,10 @@ body {
 .md3-switch-thumb {
   position: absolute;
   top: 50%;
-  left: 6px;
-  width: 16px;
-  height: 16px;
-  margin-top: -8px;
+  left: 5px;
+  width: 14px;
+  height: 14px;
+  margin-top: -7px;
   border-radius: 50%;
   background: var(--md-sys-color-outline);
   transition: left .2s var(--ease-out), background .2s var(--ease-out);
@@ -302,7 +302,7 @@ body {
   border-color: var(--md-sys-color-primary);
 }
 .name-toggle[aria-checked="true"] .md3-switch-thumb {
-  left: 26px;
+  left: 25px;
   background: var(--md-sys-color-on-primary);
 }
 
@@ -504,40 +504,21 @@ body {
 }
 .panel-sub { font-size: 10.5px; font-weight: 400; color: var(--md-sys-color-on-surface-variant); letter-spacing: 0.02em; }
 
-/* ---- 图例（Filter Chip） ---- */
-.legend { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+/* ---- 图例（只读展示，风格与刷点方案一致） ---- */
+.legend { display: grid; grid-template-columns: 1fr 1fr; gap: 4px 12px; }
 .legend-item {
-  display: flex; align-items: center; gap: 10px;
-  height: 56px;   /* ≥48dp 触控目标，并放大密码机图标 */
-  width: 100%;
-  padding: 0 12px;
-  background: transparent;
-  border: 1px solid var(--md-sys-color-outline-variant);
+  display: flex; align-items: center; gap: 8px;
+  padding: 8px 12px;
   border-radius: var(--md-sys-shape-corner-sm);
-  cursor: pointer; color: var(--md-sys-color-on-surface-variant);
-  transition: background .15s ease, border-color .15s ease, opacity .15s ease;
+  color: var(--md-sys-color-on-surface-variant);
 }
-.legend-item:hover { background: var(--state-hover); }
-.legend-item:active { background: var(--state-pressed); }
-.legend-item.brush-active {
-  background: var(--md-sys-color-secondary-container);
-  border-color: transparent;
-  color: var(--md-sys-color-on-secondary-container);
-}
-.legend-item.is-disabled { opacity: 0.38; cursor: not-allowed; }
-.legend-item.is-disabled:hover { background: transparent; }
-.legend-item.is-disabled:active { background: transparent; }
 .legend-canvas {
   width: 36px; height: 36px; flex: 0 0 36px;
   background: #15130e;                              /* 暗色底座：与地图画布一致，保证状态色在图例与地图上一致可读 */
   border: 1px solid var(--md-sys-color-outline);
   border-radius: 50%;
 }
-.legend-label { font-size: 11.5px; flex: 1; }
-.legend-count {
-  font-size: 13px; font-weight: 700;
-  color: var(--md-sys-color-primary); min-width: 1em; text-align: right;
-}
+.legend-label { font-size: 12.5px; flex: 1; }
 
 /* ---- 刷点方案（Card 列表） ---- */
 .preset-list { display: grid; grid-template-columns: 1fr 1fr; gap: 4px 12px; }
@@ -610,12 +591,14 @@ body {
 .linkage-items {
   display: flex;
   flex-wrap: wrap;
-  gap: 12px 18px;
+  gap: 4px 12px;
 }
 .linkage-item {
   display: inline-flex;
   align-items: center;
   gap: 8px;
+  padding: 8px 12px;
+  border-radius: var(--md-sys-shape-corner-sm);
   font-size: 12.5px;
   color: var(--md-sys-color-on-surface-variant);
   cursor: default;

@@ -11,10 +11,12 @@ import { mountTour } from './tour.js';
 
 /* ===================== 常量：状态定义 ===================== */
 const STATE_ORDER = ['unknown', 'noCipher', 'hasCipher', 'small', 'big', 'finish'];
+/* 简易模式（默认）：仅保留推导必需的三种状态 */
+const SIMPLE_ORDER = ['unknown', 'noCipher', 'hasCipher'];
 const STATE_META = {
   unknown:   { label: '未知',              short: '未知' },
   noCipher:  { label: '无电机',           short: '无' },
-  hasCipher: { label: '未破译',             short: '未' },
+  hasCipher: { label: '未破译',             short: '未', simple: '有电机' },
   small:     { label: '小遗产',   short: '小' },
   big:       { label: '大遗产',   short: '大' },
   finish:    { label: '已点亮',             short: '亮' }
@@ -56,36 +58,22 @@ const TOUR_STEPS = [
   {
     target: '#sidebarToggle',
     title: '选择地图',
-    text: '点击此处展开地图列表，选择或切换当前比赛的地图。'
+    text: '点击左上角地图名称（或左侧拉手）打开地图菜单，选择当前比赛的地图。'
   },
   {
     target: '#mapWrap',
-    title: '地图交互与操作',
-    text: '• 点击 / 右键点位：状态切换（左键轮换状态，右键/长按回退状态）\n• 鼠标滚轮：缩放地图视角\n• 按住拖拽：平移地图查看细节'
+    title: '标记电机',
+    text: '• 点击点位 = 切换 有/无电机\n• 右键 / 长按 = 回退\n• 滚轮缩放 · 拖拽平移'
   },
   {
     target: ['#confirmLayoutBtn', '#resetBtn'],
-    title: '确认布局（核心功能）',
-    text: '这是推导的核心工具！当排查至方案唯一（剩余 1 组）时，点击「确认布局」即可锁定场上真实的 7 台密码机；遇到标记错误需要重新分析时，点击「重置」即可恢复。\n提示：锁定布局后，按下「重置」按钮才能解除锁定。'
-  },
-  {
-    target: ['#autoConfirmToggle', '#nameToggle', '#themeToggle'],
-    title: '右上角快捷开关',
-    text: '• 快速确认：匹配仅剩 1 组时自动锁定布局，省去手动点击「确认布局」\n• 名称标注：在地图上显示 / 隐藏区域与大门名称\n• 深色模式：在亮 / 暗主题间切换（记住你的选择）'
-  },
-  {
-    target: '#legendPanel',
-    title: '状态图例与过滤',
-    text: '在此处实时查看各类密码机的数量统计；直接点击特定图例可快速切换或辅助筛选点位状态。'
-  },
-  {
-    target: '#presetPanel',
-    title: '刷点方案',
-    text: '点击刷点方案可快速确认布局'
+    title: '确认布局',
+    text: '排查到剩余 1 组时，点击「确认布局」锁定场上真实的 7 台电机；需要重新分析时点「重置」。'
   },
   {
     target: null,
-    title: '数据来源与开源项目',
+    noCount: true,
+    title: '数据来源与开源',
     text: '• 数据致谢：本项目涉及的所有点位数据及地图资源均整合自 Bilibili 第五人格 Wiki。\n• 开源仓库：本项目已在 GitHub 完全开源，欢迎提交 Issue 交流反馈或给项目点个 Star 🌟！',
     link: { text: '前往 GitHub 仓库 →', href: 'https://github.com/avatarisblack-byte/idv-map-tools' }
   }
@@ -122,7 +110,14 @@ let currentData = null;      // 当前地图数据
 let engine = null;           // 刷点联动规则引擎
 let linkage = null;          // 最近一次推导结果
 let pointStates = {};        // id -> state key
-let activeBrush = null;      // null = 循环模式
+let proMode = false;         // 专业模式：显示全部 6 种状态；默认简易模式仅 3 态（两者均左键轮换）
+
+/* 当前模式的基础操作提示文案 */
+function hintDefault() {
+  return proMode
+    ? '左键 = 状态前进 · 右键 / 长按 = 状态回退 · 悬停查看联动关系 · 滚轮缩放 · 拖拽平移'
+    : '左键 = 切换 有/无电机 · 右键 / 长按 = 回退 · 滚轮缩放 · 拖拽平移';
+}
 let mapImage = null;         // 底图 Image
 let nameMarks = [];          // 地图名称标注（仅 text / door 类型）
 let showNames = false;       // 名称标注开关
@@ -158,6 +153,7 @@ const resetBtn = document.getElementById('resetBtn');
 const themeToggle = document.getElementById('themeToggle');
 const nameToggle = document.getElementById('nameToggle');
 const autoConfirmToggle = document.getElementById('autoConfirmToggle');
+const proModeToggle = document.getElementById('proModeToggle');
 const iconSizeSlider = document.getElementById('iconSizeSlider');
 const iconSizeValue = document.getElementById('iconSizeValue');
 
@@ -512,13 +508,19 @@ function drawMarker(p, now) {
 
 /* ===================== 交互 ===================== */
 function applyPoint(id) {
-  if (activeBrush) setState(id, activeBrush);
-  else cycle(id, 1);
+  cycle(id, 1);
 }
 function cycle(id, dir) {
-  // 锁定布局下仅在确定态（未破译/小遗产/大遗产/已点亮）间轮转；
-  // 必刷点同样跳过「未知 / 确认无密码机」
-  const order = (layoutLocked || (engine && engine.isAlwaysSpawn(id))) ? HAS_FAMILY : STATE_ORDER;
+  // 未锁定：统一 3 态推导（未知/无电机/有电机）；锁定后才可操作遗产/破译完成
+  // 锁定后：专业 4 态（有电机/小遗产/大遗产/已点亮）、简易 2 态（有电机/已点亮）；必刷点固定有电机
+  let order;
+  if (layoutLocked) {
+    order = proMode ? HAS_FAMILY : ['hasCipher', 'finish'];
+  } else if (engine && engine.isAlwaysSpawn(id)) {
+    order = ['hasCipher'];
+  } else {
+    order = SIMPLE_ORDER;
+  }
   const idx = order.indexOf(pointStates[id]);
   const start = idx === -1 ? 0 : idx;
   const next = order[(start + dir + order.length) % order.length];
@@ -541,7 +543,6 @@ function setState(id, state) {
     }
   }
   pointStates[id] = state;
-  updateLegend();
   updateStatus();
 }
 
@@ -628,11 +629,10 @@ function lockLayout(group) {
       pointStates[pid] = 'hasCipher';
     }
   }
-  activeBrush = null;
-  brushHint.textContent = '布局已锁定：点击密码机 / 图例可切换 未破译 · 小遗产 · 大遗产 · 已点亮；点击其他刷点方案可切换布局，点击右上角【重置】解除锁定';
+  brushHint.textContent = '布局已锁定：' + (proMode ? '左键轮换确定态；' : '') + '点击其他刷点方案可切换布局，点击右上角【重置】解除锁定';
   brushHint.classList.remove('warn');
   brushHint.classList.add('on');
-  updateLegend();
+  buildLegend();
   updateConfirmLayoutBtn();
   updateStatus();
 }
@@ -686,20 +686,26 @@ function updateStatus() {
   updateConfirmLayoutBtn();
 }
 
+/* 当前应显示/轮换的状态集合：未锁定 3 态；锁定后专业 4 态、简易 2 态 */
+function legendOrder() {
+  if (layoutLocked) return proMode ? HAS_FAMILY : ['hasCipher', 'finish'];
+  return SIMPLE_ORDER;
+}
+
 function buildLegend() {
   const container = document.getElementById('legend');
-  STATE_ORDER.forEach(s => {
+  container.innerHTML = '';
+  const order = legendOrder();
+  // 3 态时一行 3 列并排；2/4 态用 2 列（2×2）
+  container.style.gridTemplateColumns = (order.length === 3) ? 'repeat(3, 1fr)' : 'repeat(2, 1fr)';
+  order.forEach(s => {
     const meta = STATE_META[s];
-    const item = document.createElement('button');
-    item.type = 'button';
+    const item = document.createElement('div');
     item.className = 'legend-item';
     item.dataset.state = s;
-    item.setAttribute('aria-pressed', 'false');
     item.innerHTML =
       '<canvas class="legend-canvas" width="72" height="72"></canvas>' +
-      '<span class="legend-label">' + meta.label + '</span>' +
-      '<span class="legend-count">0</span>';
-    item.addEventListener('click', () => setBrush(s));
+      '<span class="legend-label">' + (proMode ? meta.label : (meta.simple || meta.label)) + '</span>';
     container.appendChild(item);
     paintLegendSwatch(item.querySelector('.legend-canvas'), s);
   });
@@ -808,41 +814,7 @@ function paintLinkageSwatch(cv, type) {
   c.restore();
 }
 
-function updateLegend() {
-  const counts = {};
-  STATE_ORDER.forEach(s => { counts[s] = 0; });
-  if (currentData) {
-    // 锁定布局下仅统计场上 7 台真实密码机（隐藏非确定态计数）
-    const pts = (layoutLocked && lockedGroup)
-      ? currentData.allPoints.filter(p => lockedGroup.points.has(p.id))
-      : currentData.allPoints;
-    pts.forEach(p => { counts[pointStates[p.id]]++; });
-  }
-  STATE_ORDER.forEach(s => {
-    const el = document.querySelector('.legend-item[data-state="' + s + '"]');
-    if (!el) return;
-    el.querySelector('.legend-count').textContent = counts[s];
-    el.classList.toggle('brush-active', activeBrush === s);
-    el.setAttribute('aria-pressed', String(activeBrush === s));
-    el.classList.toggle('is-disabled', layoutLocked && (s === 'unknown' || s === 'noCipher'));
-  });
-}
 
-function setBrush(state) {
-  // 锁定布局下仅允许设置确定态（未破译/小遗产/大遗产/已点亮）
-  if (layoutLocked && (state === 'unknown' || state === 'noCipher')) return;
-  activeBrush = (activeBrush === state) ? null : state;
-  if (activeBrush) {
-    brushHint.textContent = '画笔模式：「' + STATE_META[activeBrush].label + '」— 点击点位直接标记（再次点击图例取消）';
-    brushHint.classList.remove('warn');
-    brushHint.classList.add('on');
-  } else {
-    brushHint.textContent = '左键 = 状态前进 · 右键 / 长按 = 状态回退 · 悬停查看联动关系 · 滚轮缩放 · 拖拽平移';
-    brushHint.classList.remove('on');
-    brushHint.classList.remove('warn');
-  }
-  updateLegend();
-}
 
 function buildPresetList() {
   const container = document.getElementById('presetList');
@@ -946,9 +918,8 @@ async function loadMap(name) {
     hoveredId = null;
     layoutLocked = false;
     lockedGroup = null;
-    activeBrush = null;
     clearTimeout(autoConfirmTimer);
-    brushHint.textContent = '左键 = 状态前进 · 右键 / 长按 = 状态回退 · 悬停查看联动关系 · 滚轮缩放 · 拖拽平移';
+    brushHint.textContent = hintDefault();
     brushHint.classList.remove('on');
     brushHint.classList.remove('warn');
     imgW = data.aspectW;
@@ -960,7 +931,6 @@ async function loadMap(name) {
     document.title = data.mapName + ' · 密码机刷点推导工具';
 
     buildPresetList();
-    updateLegend();
     updateStatus();
 
     await Promise.all([loadImage(data), loadNameMarks(name)]);
@@ -1107,7 +1077,7 @@ function bindEvents() {
     const p = hitTest(pos.x, pos.y);
     if (p) {
       cycle(p.id, -1);
-      suppressClick = true;   // 已回退，抬手时不再前进轮转（覆盖触屏长按）
+      suppressClick = true;   // 已回退，抬手时不再触发前进轮转（覆盖触屏长按）
     }
   });
 
@@ -1142,6 +1112,19 @@ function bindEvents() {
     MARKER_R = 16 * scale;
     iconSizeValue.textContent = iconSizeSlider.value + '%';
     // 主循环 draw 每帧重绘，变量更新后自动生效
+  });
+  proModeToggle.addEventListener('click', () => {
+    proMode = !proMode;
+    proModeToggle.setAttribute('aria-checked', String(proMode));
+    buildLegend();
+    if (layoutLocked) {
+      brushHint.textContent = '布局已锁定：' + (proMode ? '左键轮换确定态；' : '') + '点击其他刷点方案可切换布局，点击右上角【重置】解除锁定';
+      brushHint.classList.add('on');
+    } else {
+      brushHint.textContent = hintDefault();
+      brushHint.classList.remove('on');
+      brushHint.classList.remove('warn');
+    }
   });
 }
 
@@ -1182,13 +1165,12 @@ function resetAll() {
   if (!currentData) return;
   layoutLocked = false;
   lockedGroup = null;
-  activeBrush = null;
   clearTimeout(autoConfirmTimer);
   currentData.allPoints.forEach(p => { pointStates[p.id] = engine.isAlwaysSpawn(p.id) ? 'hasCipher' : 'unknown'; });
-  brushHint.textContent = '点击点位 = 状态轮换（右键 / 长按 = 回退）· 悬停查看联动关系';
+  brushHint.textContent = hintDefault();
   brushHint.classList.remove('on');
   brushHint.classList.remove('warn');
-  updateLegend();
+  buildLegend();
   updateStatus();
 }
 

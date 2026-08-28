@@ -23,6 +23,7 @@ export function mountTour({ steps = [], storageKey = DEFAULT_STORAGE_KEY } = {})
     return { start() {}, restart() {}, isCompleted() { return true; } };
   }
 
+  const countedTotal = steps.filter(s => !s.noCount).length;  // 参与进度计数的步骤数（noCount 步骤不计数）
   let current = 0;
   let active = false;
   let savedScrollTop = 0;   // 进入指引前的滚动位置（结束时恢复）
@@ -280,7 +281,7 @@ export function mountTour({ steps = [], storageKey = DEFAULT_STORAGE_KEY } = {})
 
     titleEl.textContent = step.title;
     bodyEl.innerHTML = renderBody(step.text || '') + renderLinks(step.link);
-    progressEl.textContent = (index + 1) + '/' + steps.length;
+    progressEl.textContent = step.noCount ? '致谢' : (index + 1) + '/' + countedTotal;
 
     // 每次切换重播内容切入动画（移除类 → 强制重排 → 加回类）
     popover.classList.remove('tour-switching');

@@ -74,12 +74,13 @@
 │   ├── .brush-hint           # 操作提示（默认=左键/右键/悬停/滚轮/拖拽；.on 金色高亮 / .warn 红色胶囊=点亮 5 台上限拦截；竖屏 white-space:normal 换行）
 │   └── .app-footer           # .footer-actions（三按钮：新手引导 / Bilibili Wiki / GitHub，均带图标居左）
 └── .right-panel#rightPanel   # 右侧控制栏（surface-container-low，无左边框）
-    ├── .panel-tools          # 顶部工具行（靠右）：快速确认 + 名称标注开关 + 主题切换
+    ├── .panel-tools          # 顶部工具行（靠右）：快速确认 + 名称标注开关 + 专业模式开关 + 主题切换
     │   ├── #autoConfirmToggle # 快速确认开关（MD3 Switch + 标签，aria-checked），开启后匹配唯一时延迟 500ms 自动 lockLayout（防抖，兼容双击/三击）
     │   ├── #nameToggle       # 名称标注开关（MD3 Switch：52×32 轨道 + 16px 手柄 + 标签，aria-checked），控制地图名称标注层显隐
+    │   ├── #proModeToggle    # 专业模式开关（MD3 Switch + 标签，aria-checked）：锁定后专业 4 态（含大小遗产）、简易 2 态（有电机/已点亮）；未锁定两模式均 3 态左键轮换
     │   └── #themeToggle      # 深色模式切换（Icon Button，月亮/太阳 SVG）
     ├── .panel#legendPanel    # 卡片（filled: surface-container-highest，无描边/阴影；竖屏 order:2 置于刷点方案之后）
-    │   ├── .legend           # 状态图例 = Filter Chip（.legend-item 56px、圆形暗色底座、对称 2 列网格，aria-pressed）
+    │   ├── .legend           # 状态图例（只读、无计数，风格与刷点方案一致）：无边框紧凑卡片 + 28px 状态色圆点、2 列网格；未锁定 3 态（未知/无电机/有电机），锁定后专业 4 态 / 简易 2 态
     │   └── .linkage-legend   # 联动关系图例（只读：伴生/互斥/必刷，暗色圆底座 36px、去发光、无边框不可交互，分隔于状态图例下方）
     ├── .panel#presetPanel    # 卡片：刷点方案（.preset-chip 2 列网格；悬停 state-layer；点击直接确认布局 lockLayout，锁定后点击可切换锁定方案；筛选/锁定后显示 SVG 对勾/叉；is-filtered 降透明 / is-locked tertiary 文字；竖屏 order:1 置于图例之前）
     └── .panel#iconSizePanel  # 卡片：图标大小滑块（.icon-size-slider 无极 range 60%~160%，accent-color，两端小/大圆点 .icon-size-dot-sm/-lg；input 事件调节 ICON_PX/MARKER_R 等比缩放，主循环每帧自动重绘；竖屏随 right-panel 置于 footer 三按钮上方）
@@ -176,10 +177,10 @@ requestAnimationFrame(loop) → draw(now)：
 ### 4.3 交互 → 状态 → 联动链路
 
 ```
-pointerdown → 拖拽平移/点击判定；pointerup → hitTest → applyPoint(id) → cycle/setState
+pointerdown → 拖拽平移/点击判定；pointerup → hitTest → applyPoint(id) → cycle（未锁定 3 态；锁定后专业 4 态 / 简易 2 态）
 contextmenu（右键/长按）→ cycle(id, -1)；wheel → zoomAt；pointermove → updateHover → buildTooltip
-图例点击 → setBrush（画笔模式）；重置 → resetAll；刷点方案点击 → lockLayout（锁定后再次点击可切换锁定方案）；图标大小滑块 → 调节 ICON_PX/MARKER_R（等比缩放）
-setState → updateLegend() → updateStatus() → recompute() → filterGroups → 更新剩余组数 / linkageBar / 方案列表 / 确认按钮态 → 下一帧 draw()
+重置 → resetAll；刷点方案点击 → lockLayout（锁定后再次点击可切换锁定方案）；锁定/重置/专业模式切换 → buildLegend 重建图例；图标大小滑块 → 调节 ICON_PX/MARKER_R（等比缩放）
+setState → updateStatus() → recompute() → filterGroups → 更新剩余组数 / linkageBar / 方案列表 / 确认按钮态 → 下一帧 draw()
 ```
 
 ---
@@ -188,7 +189,7 @@ setState → updateLegend() → updateStatus() → recompute() → filterGroups 
 
 - **必须 HTTP 访问**：`fetch` 加载 JSON + ES Module 导入，`file://` 下被浏览器拦截。
 - **坐标**：`x/y` 为 0~100 百分比；缩放时点位图标保持固定屏幕尺寸。
-- **状态语义**：`hasCipher/small/big/finish` 归「有密码机」（必须包含），`noCipher` 为「排除」；`finish`（已点亮）最多 5 台——点亮 5 台即可开门逃生，超限在 `setState` 拦截。
+- **状态语义**：`hasCipher/small/big/finish` 归「有密码机」（必须包含），`noCipher` 为「排除」；未锁定阶段仅操作 3 态（未知/无电机/有电机）推导，锁定后才可操作 `small/big/finish`（遗产/破译完成）；`finish`（已点亮）最多 5 台——点亮 5 台即可开门逃生，超限在 `setState` 拦截。
 - **规则引擎零硬编码**：新增地图只需 `maps/data/` 放 JSON + `app.js` 的 `MAP_LIST` 加名。
 - **图标**：密码机造型内联为 `Path2D`（`CIPHER_BODY/CIPHER_ANTENNA/CIPHER_HALO`）。
 - **MD3 合规要点**（依 `.claude/skills/material-design-3-ui`）：
@@ -196,6 +197,6 @@ setState → updateLegend() → updateStatus() → recompute() → filterGroups 
   - 按钮按语义用 Filled（主行动）/ Outlined / Text / Icon，**全药丸 40px**；图例是 Filter Chip（**8px 圆角流式**，非药丸）；
   - 阴影仅保留 drawer / tooltip / popover 等悬浮层；
   - 状态层用 `color-mix`（on-surface 8%/12%）。
-- **无障碍**：全局 `:focus-visible` 主色焦点环；图标按钮带 `aria-label`；图例 `aria-pressed`；地图菜单 `aria-current=page`；`prefers-reduced-motion` 关闭动效。
-- **新手指引**：7 步（Step 4 = 右上角快捷开关：快速确认 / 名称标注 / 深色模式；Step 6 = 刷点方案，点击可快速确认布局；Step 7 = 数据来源与开源仓库，居中气泡并高亮气泡本体，含 GitHub 链接按钮），目标滚出视口才自动平滑滚动到目标板块（横屏 `overflow:hidden` 一屏显示、不滚动）、结束恢复原滚动位置，完成/跳过写 `localStorage.hasCompletedTour=true`。步骤切换重播标题/正文「切入动画」（`.tour-switching`，延迟 0.08s 让聚光灯先动、文字后浮现），完成/跳过先播「淡出动画」（`body.tour-closing`）再隐藏；滚动收尾用「静止去抖（120ms）」替代固定 700ms 兜底，避免长滚动中提前恢复过渡造成拖尾。
+- **无障碍**：全局 `:focus-visible` 主色焦点环；图标按钮带 `aria-label`；地图菜单 `aria-current=page`；`prefers-reduced-motion` 关闭动效。
+- **新手指引**：3 步（选择地图 → 标记电机：点击切换 有/无电机 → 确认布局）+ 第 4 步「数据来源与开源」居中气泡（`noCount` 不计入进度、显示「致谢」），目标滚出视口才自动平滑滚动到目标板块（横屏 `overflow:hidden` 一屏显示、不滚动）、结束恢复原滚动位置，完成/跳过写 `localStorage.hasCompletedTour=true`。步骤切换重播标题/正文「切入动画」（`.tour-switching`，延迟 0.08s 让聚光灯先动、文字后浮现），完成/跳过先播「淡出动画」（`body.tour-closing`）再隐藏；滚动收尾用「静止去抖（120ms）」替代固定 700ms 兜底，避免长滚动中提前恢复过渡造成拖尾。
 - **动效令牌**：`--ease-out / --ease-in-out / --ease-drawer`；仅动画 `transform/opacity/color/border/background/box-shadow`。
