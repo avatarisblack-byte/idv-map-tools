@@ -63,7 +63,7 @@ const TOUR_STEPS = [
   {
     target: '#mapWrap',
     title: '标记电机',
-    text: '• 点击点位 = 切换 有/无电机\n• 右键 / 长按 = 回退\n• 滚轮缩放 · 拖拽平移'
+    text: '• 单击 = 有电机\n• 双击 = 没电机\n• 右键 / 长按 = 回退\n• 滚轮缩放 · 拖拽平移'
   },
   {
     target: ['#confirmLayoutBtn', '#resetBtn'],
@@ -629,7 +629,7 @@ function lockLayout(group) {
       pointStates[pid] = 'hasCipher';
     }
   }
-  brushHint.textContent = '布局已锁定：' + (proMode ? '左键轮换确定态；' : '') + '点击其他刷点方案可切换布局，点击右上角【重置】解除锁定';
+  brushHint.textContent = '布局已锁定：左键轮换确定态；点击其他刷点方案可切换布局，点击右上角【重置】解除锁定';
   brushHint.classList.remove('warn');
   brushHint.classList.add('on');
   buildLegend();
@@ -1118,7 +1118,7 @@ function bindEvents() {
     proModeToggle.setAttribute('aria-checked', String(proMode));
     buildLegend();
     if (layoutLocked) {
-      brushHint.textContent = '布局已锁定：' + (proMode ? '左键轮换确定态；' : '') + '点击其他刷点方案可切换布局，点击右上角【重置】解除锁定';
+      brushHint.textContent = '布局已锁定：左键轮换确定态；点击其他刷点方案可切换布局，点击右上角【重置】解除锁定';
       brushHint.classList.add('on');
     } else {
       brushHint.textContent = hintDefault();
