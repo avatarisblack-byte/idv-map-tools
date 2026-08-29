@@ -49,7 +49,7 @@
 
 - **依赖**：`@material/material-color-utilities@^0.3.0`（锁定 0.3.x；`0.4.0` 的 ESM 产物在纯 Node 下无法解析）。
 - **构建期生成、运行时零依赖**：`scripts/generate-m3-tokens.mjs` 用 Dynamic Color 算法（种子色 `#c9a227`）生成静态 `src/styles/md3-tokens.css`；浏览器无 importmap、无打包器。
-- **亮/暗方案**：`:root` 为暗色，`.md3-light` 为亮色。当前 `<html class="md3-light">` 默认亮色（白底）；右上角 `#themeToggle` 按钮切换深色（增删 `md3-light` class，`localStorage.idvTheme` 记忆）。
+- **亮/暗方案**：`:root` 为暗色，`.md3-light` 为亮色。当前 `<html class="md3-light">` 默认亮色（白底）；右上角 `#themeToggle` 按钮切换深色（增删 `md3-light` class，`localStorage.idvTheme` 记忆）。切换时在 `<html>` 上临时加 `theme-transition` class，由 `html.theme-transition *` 统一全局颜色过渡（.3s `--ease-out`，约 320ms 后移除），避免各元素各自 150ms 过渡造成「已锁定」按钮等明度反差大的元素跳变；初始化加载不加该 class，避免首屏闪烁；`prefers-reduced-motion` 下该过渡被禁用。
 - **核心 Token**：
   - 色彩 `--md-sys-color-*`：primary / on-primary / primary-container / secondary / tertiary / error / surface / on-surface / surface-variant / on-surface-variant / outline / outline-variant / **surface-container-(lowest|low|container|high|highest)** / surface-dim|bright / inverse-* 等
   - 字体 `--md-ref-typeface-plain`（Roboto/Noto Sans SC）、`--md-ref-typeface-brand`（style.css 覆盖为 Noto Serif SC 衬线，用于品牌标题）
@@ -74,11 +74,12 @@
 │   ├── .brush-hint           # 操作提示（默认=左键/右键/悬停/滚轮/拖拽；.on 金色高亮 / .warn 红色胶囊=点亮 5 台上限拦截；竖屏 white-space:normal 换行）
 │   └── .app-footer           # .footer-actions（三按钮：新手引导 / Bilibili Wiki / GitHub，均带图标居左）
 └── .right-panel#rightPanel   # 右侧控制栏（surface-container-low，无左边框）
-    ├── .panel-tools          # 顶部工具行（靠右）：快速确认 + 名称标注开关 + 「更多」开关 + 主题切换
+    ├── .panel-tools          # 顶部工具行（靠右）：快速确认 + 名称标注开关 + 「更多」开关 + 主题切换 + 说明小字
     │   ├── #autoConfirmToggle # 快速确认开关（MD3 Switch + 标签，aria-checked），开启后匹配唯一时延迟 500ms 自动 lockLayout（防抖，兼容双击/三击）
-    │   ├── #nameToggle       # 名称标注开关（MD3 Switch：52×32 轨道 + 16px 手柄 + 标签，aria-checked），控制地图名称标注层显隐
+    │   ├── #nameToggle       # 名称标注开关（MD3 Switch：52×32 轨道 + 16px 手柄 + 标签，aria-checked，默认开启），控制地图名称标注层显隐
     │   ├── #proModeToggle    # 「更多」开关（MD3 Switch + 标签，aria-checked）：锁定后更多 4 态（含大小遗产）、简易 2 态（有电机/已点亮）；未锁定两模式均 3 态左键轮换
-    │   └── #themeToggle      # 深色模式切换（Icon Button，月亮/太阳 SVG）
+    │   ├── #themeToggle      # 深色模式切换（Icon Button，月亮/太阳 SVG）
+    │   └── .tool-note       # 「快速」说明小字「快速：匹配唯一时自动锁定布局」（绝对定位，水平居中于整个右侧边栏，10.5px，on-surface-variant）
     ├── .panel#legendPanel    # 卡片（filled: surface-container-highest，无描边/阴影；竖屏 order:2 置于刷点方案之后）
     │   ├── .legend           # 状态图例（只读、无计数，风格与刷点方案一致）：无边框紧凑卡片 + 36px 状态色圆点、3 态并排（2/4 态 2 列）；未锁定 3 态（未知/无电机/有电机），锁定后更多 4 态 / 简易 2 态
     │   └── .linkage-legend   # 联动关系图例（只读：伴生/互斥/必刷，暗色圆底座 36px、去发光、无边框不可交互，分隔于状态图例下方）

@@ -25,6 +25,17 @@
   --state-pressed: color-mix(in srgb, var(--md-sys-color-on-surface) 12%, transparent);
 }
 
+/* ---- 主题切换：统一全局颜色过渡（配合 app.js 的 theme-transition class，避免各元素各自 150ms 过渡造成跳变） ---- */
+html.theme-transition *,
+html.theme-transition *::before,
+html.theme-transition *::after {
+  transition: background-color .3s var(--ease-out),
+              color .3s var(--ease-out),
+              border-color .3s var(--ease-out),
+              box-shadow .3s var(--ease-out),
+              opacity .3s var(--ease-out) !important;
+}
+
 * { box-sizing: border-box; }
 html, body { margin: 0; padding: 0; }
 
@@ -248,11 +259,27 @@ body {
 .icon-btn svg { width: 20px; height: 20px; display: block; }
 /* ---- 顶部工具行（快速确认 + 名称标注 + 主题切换） ---- */
 .panel-tools {
+  position: relative;   /* 作为「快速」说明小字的定位基准 */
   display: flex;
   align-items: center;
   justify-content: flex-end;
   flex-wrap: wrap;      /* 空间不足时控件整体换行（避免标签被压缩换行） */
   gap: 3px;
+  margin-bottom: 6px;   /* 给下方悬浮的说明小字留空间，避免压到状态图例卡片 */
+}
+
+/* 「快速」说明小字：绝对定位，水平居中于整个右侧边栏，不占布局高度、不影响按钮排版 */
+.tool-note {
+  position: absolute;
+  top: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  margin-top: 2px;
+  font-size: 10.5px;
+  line-height: 1.2;
+  letter-spacing: 0.02em;
+  color: var(--md-sys-color-on-surface-variant);
+  white-space: nowrap;
 }
 
 /* ---- 开关（MD3 Switch + 标签） ---- */
@@ -705,6 +732,9 @@ body {
 /* ============ 无障碍：减少动态效果 ============ */
 @media (prefers-reduced-motion: reduce) {
   .sidebar, .drawer-backdrop { transition: none; }
+  html.theme-transition *,
+  html.theme-transition *::before,
+  html.theme-transition *::after { transition: none !important; }
   .map-item, .icon-btn, .reset-btn, .legend-item, .preset-chip, .sidebar-toggle, .confirm-layout-btn, .name-toggle, .md3-switch, .md3-switch-thumb {
     transition-duration: 0.01ms;
   }

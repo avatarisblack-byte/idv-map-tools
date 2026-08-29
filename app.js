@@ -120,7 +120,7 @@ function hintDefault() {
 }
 let mapImage = null;         // 底图 Image
 let nameMarks = [];          // 地图名称标注（仅 text / door 类型）
-let showNames = false;       // 名称标注开关
+let showNames = true;        // 名称标注开关（默认开启，用户未主动关闭时显示）
 let autoConfirm = false;     // 快速确认开关（匹配唯一时自动锁定布局）
 let autoConfirmTimer = null; // 快速确认自动锁定的延迟定时器（给双击/三击留出连续操作窗口）
 let previewIds = new Set();  // 方案列表悬停预览点位
@@ -1005,6 +1005,7 @@ function bindSidebarToggle() {
 
 /* ===================== 深色模式切换 ===================== */
 const THEME_KEY = 'idvTheme';
+let themeTransitionTimer = null;   // 主题切换过渡结束后移除临时 class 的定时器
 const MOON_SVG = '<svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true" focusable="false"><path fill="currentColor" d="M12 3c-4.97 0-9 4.03-9 9s4.03 9 9 9 9-4.03 9-9c0-.46-.04-.92-.1-1.36-.98 1.37-2.58 2.26-4.4 2.26-2.98 0-5.4-2.42-5.4-5.4 0-1.81.89-3.42 2.26-4.4-.44-.06-.9-.1-1.36-.1z"/></svg>';
 const SUN_SVG = '<svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true" focusable="false"><path fill="currentColor" d="M12 7c-2.76 0-5 2.24-5 5s2.24 5 5 5 5-2.24 5-5-2.24-5-5-5zM2 13h2c.55 0 1-.45 1-1s-.45-1-1-1H2c-.55 0-1 .45-1 1s.45 1 1 1zm18 0h2c.55 0 1-.45 1-1s-.45-1-1-1h-2c-.55 0-1 .45-1 1s.45 1 1 1zM11 2v2c0 .55.45 1 1 1s1-.45 1-1V2c0-.55-.45-1-1-1s-1 .45-1 1zm0 18v2c0 .55.45 1 1 1s1-.45 1-1v-2c0-.55-.45-1-1-1s-1 .45-1 1zM5.99 4.58c-.39-.39-1.03-.39-1.41 0-.39.39-.39 1.03 0 1.41l1.06 1.06c.39.39 1.03.39 1.41 0s.39-1.03 0-1.41L5.99 4.58zm12.37 12.37c-.39-.39-1.03-.39-1.41 0-.39.39-.39 1.03 0 1.41l1.06 1.06c.39.39 1.03.39 1.41 0 .39-.39.39-1.03 0-1.41l-1.06-1.06zm1.06-10.96c.39-.39.39-1.03 0-1.41-.39-.39-1.03-.39-1.41 0l-1.06 1.06c-.39.39-.39 1.03 0 1.41s1.03.39 1.41 0l1.06-1.06zM7.05 18.36c.39-.39.39-1.03 0-1.41-.39-.39-1.03-.39-1.41 0l-1.06 1.06c-.39.39-.39 1.03 0 1.41s1.03.39 1.41 0l1.06-1.06z"/></svg>';
 
@@ -1022,8 +1023,14 @@ function initTheme() {
   applyTheme(dark);
   themeToggle.addEventListener('click', () => {
     const nextDark = document.documentElement.classList.contains('md3-light');
+    // 统一全局颜色过渡，避免各元素各自 150ms 过渡造成的跳变（初始化加载时不加，避免首屏闪烁）
+    document.documentElement.classList.add('theme-transition');
     applyTheme(nextDark);
     try { localStorage.setItem(THEME_KEY, nextDark ? 'dark' : 'light'); } catch (e) { /* ignore */ }
+    clearTimeout(themeTransitionTimer);
+    themeTransitionTimer = setTimeout(() => {
+      document.documentElement.classList.remove('theme-transition');
+    }, 320);
   });
 }
 
