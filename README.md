@@ -4,8 +4,10 @@
 
 <h1 align="center">第五人格 · 密码机刷点推导工具</h1>
 
+<p align="center">⚡ VibeCoding 项目</p>
+
 <p align="center">
-  <strong>在线访问：</strong> <a href="https://idv-map-tools.vercel.app">idv-map-tools.vercel.app</a>
+  <strong>在线访问：</strong> <a href="https://idv-map-tools.vercel.app">idv-map-tools.vercel.app</a>（国际） · <a href="https://idvmap.funnytools.top/">idvmap.funnytools.top</a>（国内）
 </p>
 
 纯前端、Canvas 驱动的《第五人格》密码机（电机）刷点推导工具。内置 9 张地图的坐标数据与刷点规则，通过点位排查快速锁定每局密码机的真实布局。
