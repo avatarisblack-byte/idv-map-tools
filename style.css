@@ -37,6 +37,13 @@ html.theme-transition *::after {
 }
 
 * { box-sizing: border-box; }
+
+/* 移动端：去除浏览器默认的点击高亮色块（TAP 色块），不触及任何自定义交互反馈（:active/:hover/JS 逻辑不受影响） */
+* {
+  -webkit-tap-highlight-color: transparent;  /* 关键：WebKit 点击高亮设为透明（iOS/Android） */
+  -webkit-touch-callout: none;               /* 禁用 iOS 长按系统呼出菜单，保留自定义长按（pointer 事件）逻辑 */
+}
+
 html, body { margin: 0; padding: 0; }
 
 body {

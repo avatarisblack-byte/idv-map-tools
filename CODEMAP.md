@@ -198,6 +198,6 @@ setState → updateStatus() → recompute() → filterGroups → 更新剩余组
   - 按钮按语义用 Filled（主行动）/ Outlined / Text / Icon，**全药丸 40px**；图例是 Filter Chip（**8px 圆角流式**，非药丸）；
   - 阴影仅保留 drawer / tooltip / popover 等悬浮层；
   - 状态层用 `color-mix`（on-surface 8%/12%）。
-- **无障碍**：全局 `:focus-visible` 主色焦点环；图标按钮带 `aria-label`；地图菜单 `aria-current=page`；`prefers-reduced-motion` 关闭动效。
+- **无障碍**：全局 `:focus-visible` 主色焦点环；图标按钮带 `aria-label`；地图菜单 `aria-current=page`；`prefers-reduced-motion` 关闭动效；全局去除移动端点击高亮色块（`-webkit-tap-highlight-color: transparent`）与 iOS 长按系统菜单（`-webkit-touch-callout: none`），不触及 :active/:hover 等自定义交互反馈。
 - **新手指引**：3 步（选择地图 → 标记电机：单击有电机/双击没电机 → 确认布局）+ 第 4 步「数据来源与开源」居中气泡（`noCount` 不计入进度、显示「致谢」），目标滚出视口才自动平滑滚动到目标板块（横屏 `overflow:hidden` 一屏显示、不滚动）、结束恢复原滚动位置，完成/跳过写 `localStorage.hasCompletedTour=true`。步骤切换重播标题/正文「切入动画」（`.tour-switching`，延迟 0.08s 让聚光灯先动、文字后浮现），完成/跳过先播「淡出动画」（`body.tour-closing`）再隐藏；滚动收尾用「静止去抖（120ms）」替代固定 700ms 兜底，避免长滚动中提前恢复过渡造成拖尾。
 - **动效令牌**：`--ease-out / --ease-in-out / --ease-drawer`；仅动画 `transform/opacity/color/border/background/box-shadow`。
