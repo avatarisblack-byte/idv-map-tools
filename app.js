@@ -158,7 +158,7 @@ const iconSizeSlider = document.getElementById('iconSizeSlider');
 const iconSizeValue = document.getElementById('iconSizeValue');
 
 let cw = 0, ch = 0;
-const dpr = Math.max(1, window.devicePixelRatio || 1);
+let dpr = Math.max(1, window.devicePixelRatio || 1);
 
 /* ===================== 工具 ===================== */
 function pointNum(id) { return id.replace('p', ''); }
@@ -281,10 +281,10 @@ function resizeCanvas() {
   const rect = mapWrap.getBoundingClientRect();
   cw = rect.width;
   ch = rect.height;
+  // 每次同步时重读设备像素比：拖动窗口跨屏（DPR 变化）或浏览器缩放后依然保持清晰
+  dpr = Math.max(1, window.devicePixelRatio || 1);
   canvas.width = Math.round(cw * dpr);
   canvas.height = Math.round(ch * dpr);
-  canvas.style.width = cw + 'px';
-  canvas.style.height = ch + 'px';
 }
 
 /* ===================== 视图（缩放平移） ===================== */
@@ -926,6 +926,8 @@ async function loadMap(name) {
     imgH = data.aspectH;
     // 竖屏下地图容器高度跟随地图宽高比，避免固定高度造成的纵向留白
     mapWrap.style.setProperty('--map-aspect', imgW + ' / ' + imgH);
+    // 宽高比变化会改变容器实际尺寸，立即同步 Canvas 尺寸，避免 Canvas 与容器失配露出黑底
+    resizeCanvas();
 
     mapTitleText.textContent = data.mapName;
     document.title = data.mapName + ' · 密码机刷点推导工具';
@@ -1214,9 +1216,12 @@ async function init() {
   initTour();
 }
 
-window.addEventListener('resize', () => {
+/* 监听地图容器尺寸变化（切图改宽高比 / 旋转屏幕 / 软键盘弹出 / 地址栏显隐 / 窗口缩放），
+ * 自动同步 Canvas 尺寸并重新约束视图，替代仅覆盖窗口缩放的 resize 事件，杜绝尺寸失配黑底 */
+const mapResizeObserver = new ResizeObserver(() => {
   resizeCanvas();
   clampView();
 });
+mapResizeObserver.observe(mapWrap);
 
 init();

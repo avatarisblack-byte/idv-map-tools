@@ -165,7 +165,14 @@ linkage = { sel, excl, matched, impossible, companions, deduced }   // 派生联
 hoveredId / previewIds / activeBrush / mapImage / engine / currentData  // 瞬时态
 ```
 
-### 4.2 渲染循环
+### 4.2 画布尺寸同步（ResizeObserver 驱动）
+
+- 竖屏（≤768px）下 `.map-wrap` 高度由 CSS `aspect-ratio: var(--map-aspect)` 决定，`--map-aspect` 在 `loadMap()` 中按当前地图 `aspectW/aspectH` 动态设置。
+- `resizeCanvas()` 读取 `mapWrap.getBoundingClientRect()` 同步 `cw/ch` 与 Canvas 缓冲尺寸（`cw*dpr × ch*dpr`），并**每次重读 `devicePixelRatio`**（跨屏拖动 / 浏览器缩放后仍清晰）。
+- 两处触发：① `loadMap()` 设置 `--map-aspect` 后**立即** `resizeCanvas()`（保证随后的 `fitView()` 用正确尺寸）；② 模块顶层 `ResizeObserver.observe(mapWrap)`，容器尺寸变化时回调 `resizeCanvas() + clampView()`，覆盖旋转屏幕 / 软键盘弹出 / 地址栏显隐 / 窗口缩放（替代原仅覆盖窗口缩放的 `window.resize` 监听）。
+- 若不重同步：切到更「竖长」的地图（如永眠镇 1247×1454）时容器变高而 Canvas 未变，下方露出 `.map-wrap` 背景 `#0a0907`，即「地图下方大黑条」；放大时 `clampView` 用过期的 `ch` 约束底图，观感为黑条遮盖地图。
+
+### 4.3 渲染循环
 
 ```
 requestAnimationFrame(loop) → draw(now)：
@@ -175,7 +182,7 @@ requestAnimationFrame(loop) → draw(now)：
   4) 遍历 allPoints → drawMarker(p, now)
 ```
 
-### 4.3 交互 → 状态 → 联动链路
+### 4.4 交互 → 状态 → 联动链路
 
 ```
 pointerdown → 拖拽平移/点击判定；pointerup → hitTest → applyPoint(id) → cycle（未锁定 3 态；锁定后更多 4 态 / 简易 2 态）
