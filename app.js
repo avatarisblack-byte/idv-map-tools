@@ -963,20 +963,20 @@ async function loadNameMarks(name) {
 }
 
 function loadImage(data) {
+  // AVIF 优先加载（体积更小）；失败或浏览器不支持时降级回本地 PNG，最后回退远程 PNG。
+  // 地图走 canvas 绘制，<picture> 标签不适用，故在 JS 侧实现同等降级语义。
+  const avif = data.bgImage.replace('maps/images/', 'maps/avif/').replace(/\.png$/, '_结果.avif');
+  const sources = [avif, data.bgImage, data.bgImageRemote].filter(Boolean);
   return new Promise(resolve => {
     const img = new Image();
-    let triedRemote = false;
+    let i = 0;
     img.onload = () => { mapImage = img; resolve(); };
     img.onerror = () => {
-      if (!triedRemote && data.bgImageRemote) {
-        triedRemote = true;
-        img.src = data.bgImageRemote;
-      } else {
-        mapImage = null;
-        resolve();
-      }
+      i += 1;
+      if (i < sources.length) img.src = sources[i];
+      else { mapImage = null; resolve(); }
     };
-    img.src = data.bgImage;
+    img.src = sources[0];
   });
 }
 

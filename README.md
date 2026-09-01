@@ -63,7 +63,11 @@ node serve.js
 ├── serve.js                # Node 静态服务器
 ├── 一键启动.bat             # 零依赖 PowerShell 服务器
 ├── websiteicon.png         # 站点图标（favicon + 侧栏品牌图标）
-├── maps/                   # 地图资料：坐标 JSON / 底图 PNG / 名称标注
+├── maps/                   # 地图资料
+│   ├── data/               # 9 张地图坐标 JSON
+│   ├── images/             # 9 张地图底图 PNG（AVIF 的兜底）
+│   ├── avif/               # 9 张地图底图 AVIF（优先加载，体积更小）
+│   └── names/              # 名称点位标注 JSON
 ├── assets/                 # 图标与密码机参考资源
 ├── scripts/                # MD3 Token 生成 + favicon 处理脚本
 └── src/styles/             # 生成的 MD3 设计 Token

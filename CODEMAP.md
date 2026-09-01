@@ -26,7 +26,8 @@
 │   └── material-design-3-ui/   # 项目级 Agent Skill（MD3 设计/审查规范，SKILL.md + references/*）
 ├── maps/                 # ★ 地图资料统一收纳（运行期数据 + 底图 + 数据源 + 抽取工具）
 │   ├── data/             # 9 张地图坐标 JSON（运行期由 app.js fetch 加载，bgImage 指向 maps/images/）
-│   ├── images/           # 9 张地图底图 PNG（<地图名>_基本信息_无名称点.png）
+│   ├── images/           # 9 张地图底图 PNG（<地图名>_基本信息_无名称点.png，AVIF 的兜底）
+│   ├── avif/             # 9 张地图底图 AVIF（<地图名>_基本信息_无名称点_结果.avif，体积更小，app.js 优先加载）
 │   ├── names/            # 名称点位 JSON（运行期由 app.js fetch 加载，text/door 标注）
 │   ├── ciphers/          # 密码机刷点 JSON（抽取中间产物 + 汇总）
 │   ├── raw/              # 原始 BWIKI 地图源码 txt（数据源）
@@ -110,7 +111,7 @@
 | 字段 | 说明 |
 |---|---|
 | `mapName` | 地图名（菜单名 = 文件名） |
-| `bgImage` / `bgImageRemote` | 底图本地路径 / 远程回退 URL |
+| `bgImage` / `bgImageRemote` | 底图本地 PNG 路径 / 远程回退 URL；加载时优先尝试 `maps/avif/` 的 AVIF 版本 |
 | `aspectW` / `aspectH` | 底图原始像素尺寸（Canvas 适配用） |
 | `allPoints[].x/.y` | **归一化百分比坐标（0~100）**；Canvas 换算 `(x/100*aspectW, y/100*aspectH)` |
 | `allPoints[].id` | `p1..pN`，按「跨组首次出现顺序」自动编号 |
@@ -196,6 +197,7 @@ setState → updateStatus() → recompute() → filterGroups → 更新剩余组
 ## 5. 关键约定与注意事项
 
 - **必须 HTTP 访问**：`fetch` 加载 JSON + ES Module 导入，`file://` 下被浏览器拦截。
+- **底图 AVIF 优先**：`app.js loadImage()` 先加载 `maps/avif/<地图名>_基本信息_无名称点_结果.avif`（体积更小），失败或浏览器不支持时回退 `maps/images/` 的 PNG，再回退远程 PNG；`serve.js` 已注册 `.avif` 的 MIME。
 - **坐标**：`x/y` 为 0~100 百分比；缩放时点位图标保持固定屏幕尺寸。
 - **状态语义**：`hasCipher/small/big/finish` 归「有密码机」（必须包含），`noCipher` 为「排除」；未锁定阶段仅操作 3 态（未知/无电机/有电机）推导，锁定后才可操作 `small/big/finish`（遗产/破译完成）；`finish`（已点亮）最多 5 台——点亮 5 台即可开门逃生，超限在 `setState` 拦截。
 - **规则引擎零硬编码**：新增地图只需 `maps/data/` 放 JSON + `app.js` 的 `MAP_LIST` 加名。
